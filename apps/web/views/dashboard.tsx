@@ -1033,7 +1033,7 @@ export default function Dashboard() {
 	return (
 		<div style={{ display: "flex", minHeight: "100vh", backgroundColor: C.bg }}>
 			{/* Sidebar */}
-			<div className="hidden md:flex">
+			<div style={{ display: "flex" }}>
 				<Sidebar active={activeNav} onNav={setActiveNav} liveCount={liveCount} />
 			</div>
 
