@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { ArrowLeft01Icon } from "@hugeicons/react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {

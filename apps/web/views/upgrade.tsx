@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { ArrowLeft01Icon } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 
 // ── Design tokens (shared with home.tsx) ───────────────────────────────────────
 const C = {
@@ -217,7 +218,7 @@ export default function Upgrade() {
 						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}
 						onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
 						onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}>
-						<ArrowLeft01Icon size={18} color="currentColor" />
+						<HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
 						<span style={{ fontFamily: C.sans, fontSize: "13px" }}>Back</span>
 					</a>
 					<div style={{ width: "1px", height: "18px", backgroundColor: C.border }} />

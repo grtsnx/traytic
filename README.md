@@ -294,12 +294,20 @@ es.onmessage = (e) => console.log(JSON.parse(e.data))
 
 ## Roadmap
 
-- [ ] Dashboard UI — charts, tables, live visitor map
-- [ ] GeoIP (MaxMind)
-- [ ] Goals & funnels
-- [ ] Alerts — email + Slack
+- [x] Dashboard UI — metric cards, timeseries chart, top pages & sources tables, devices & countries breakdowns
+- [x] Landing page, onboarding flow, upgrade & billing success pages
+- [x] Auth — GitHub, Google, email + password (Better Auth)
+- [x] Billing — Paystack (Africa) + Polar (global) with checkout & webhooks
+- [x] Event collection — bot filtering, Web Vitals, custom events
+- [x] Real-time — SSE live visitor count
+- [ ] Wire dashboard to live API (currently mock data)
+- [ ] GeoIP lookup (MaxMind installed, not wired into collect pipeline)
+- [ ] Goals & funnels (schema exists, needs API + UI)
+- [ ] Alerts — email + Slack (schema exists, needs API + UI)
+- [ ] Live visitor map
 - [ ] Astro, Vue, Svelte SDK adapters
 - [ ] CLI — `bunx traytic dev`
+- [ ] Team / organization management
 
 ---
 

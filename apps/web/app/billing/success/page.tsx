@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft01Icon } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 
 const C = {
 	bg: "oklch(0.08 0.006 265)",
@@ -57,7 +58,7 @@ export default function BillingSuccess() {
 						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}
 						onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
 						onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}>
-						<ArrowLeft01Icon size={18} color="currentColor" />
+						<HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
 						<span style={{ fontFamily: C.sans, fontSize: "13px" }}>Back</span>
 					</a>
 					<div style={{ width: "1px", height: "18px", backgroundColor: C.border }} />
