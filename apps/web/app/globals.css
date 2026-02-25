@@ -125,3 +125,30 @@
 		@apply bg-background text-foreground;
 	}
 }
+
+@layer utilities {
+	.text-balance {
+		text-wrap: balance;
+	}
+}[data-sonner-toaster] [data-sonner-toast] {
+	height: 3.5rem !important;
+	width: 60% !important;
+	border-radius: 1rem 1rem 1rem 1rem !important;
+	border-color: transparent !important;
+}
+
+:where([data-sonner-toast]) :where([data-icon]) {
+	display: none !important;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+/* For Firefox */
+input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}

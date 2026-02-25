@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { motion, useInView, AnimatePresence } from "motion/react";
+import Link from "next/link";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -280,12 +281,12 @@ function Nav() {
 				className="fixed top-0 left-0 right-0 z-50"
 				style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: `${C.bg}ee`, backdropFilter: "blur(12px)" }}>
 				<div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-					<a href="/" className="flex items-center gap-2" style={{ textDecoration: "none" }}>
+					<Link href="/" className="flex items-center gap-2" style={{ textDecoration: "none" }}>
 						<LogoMark size={24} />
 						<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
 							Traytic
 						</span>
-					</a>
+					</Link>
 
 					<nav className="hidden md:flex items-center gap-1">
 						{NAV_LINKS.map((item: { label: string; href: string }) => (
@@ -460,12 +461,12 @@ function Hero() {
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5, delay: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
 					className="flex flex-wrap items-center justify-center gap-3">
-					<a
+					<Link
 						href="/onboarding"
 						className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 						style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-						Get started free →
-					</a>
+					Get started free →
+				</Link>
 					<a
 						href="https://github.com/traytic/traytic"
 						target="_blank"
@@ -695,7 +696,7 @@ function Pricing() {
 									))}
 								</ul>
 
-								<a
+								<Link
 									href={plan.ctaHref}
 									className="w-full py-2.5 text-[13px] font-semibold rounded-lg transition-opacity hover:opacity-90 text-center"
 									style={{
@@ -707,7 +708,7 @@ function Pricing() {
 										display: "block",
 									}}>
 									{plan.cta}
-								</a>
+									</Link>
 							</div>
 						</FadeIn>
 					))}
@@ -738,12 +739,12 @@ function CTABanner() {
 						Start tracking in minutes. Free plan — 1 site, 50k events, no credit card.
 					</p>
 					<div className="flex flex-wrap items-center justify-center gap-3">
-						<a
+						<Link
 							href="/onboarding"
 							className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 							style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-							Get started free →
-						</a>
+					Get started free →
+				</Link>
 						<a
 							href="https://github.com/traytic/traytic"
 							target="_blank"

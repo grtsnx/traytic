@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
@@ -627,6 +628,10 @@ export default function Onboarding() {
 				credentials: "include",
 				body: JSON.stringify({ provider, callbackURL: `${window.location.origin}/onboarding` }),
 			});
+			if (res.status === 404) {
+				const label = provider === "github" ? "GitHub" : "Google";
+				throw new Error(`${label} OAuth not configured — add ${label}_CLIENT_ID to the API .env`);
+			}
 			if (!res.ok) {
 				const d = (await res.json()) as { message?: string };
 				throw new Error(d.message ?? "OAuth failed");
@@ -722,23 +727,38 @@ export default function Onboarding() {
 			{/* ── LEFT: Form panel ─────────────────────────────────────────────── */}
 			<div
 				style={{
+					flex: 1,
 					display: "flex",
 					flexDirection: "column",
-					width: "min(500px, 100vw)",
-					flexShrink: 0,
 					borderRight: `1px solid ${C.border}`,
+					position: "relative",
+					overflow: "hidden",
 				}}>
+				{/* Subtle glow */}
+				<div
+					style={{
+						position: "absolute",
+						top: "-120px",
+						left: "-120px",
+						width: "560px",
+						height: "560px",
+						background: `radial-gradient(circle, oklch(0.62 0.22 265 / 6%) 0%, transparent 65%)`,
+						pointerEvents: "none",
+					}}
+				/>
 				{/* Logo bar */}
 				<div
 					style={{
-						padding: "18px 36px",
+						padding: "20px 40px",
 						borderBottom: `1px solid ${C.border}`,
 						display: "flex",
 						alignItems: "center",
 						gap: "10px",
 						backgroundColor: C.bg,
+						position: "relative",
+						zIndex: 1,
 					}}>
-					<a href="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+					<Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
 						<LogoMark size={28} />
 						<span
 							style={{
@@ -750,11 +770,12 @@ export default function Onboarding() {
 							}}>
 							Traytic
 						</span>
-					</a>
+					</Link>
 				</div>
 
 				{/* Scrollable form area */}
-				<div style={{ flex: 1, overflowY: "auto", padding: "40px 36px" }}>
+				<div style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>
+					<div style={{ maxWidth: "480px", width: "100%", margin: "0 auto", padding: "52px 40px" }}>
 					{/* Step progress */}
 					<div style={{ marginBottom: "40px" }}>
 						<StepProgress current={step} />
@@ -865,7 +886,6 @@ export default function Onboarding() {
 											key={t}
 											onClick={() => {
 												setAuthTab(t);
-												setAccountError("");
 											}}
 											style={{
 												flex: 1,
@@ -1117,7 +1137,7 @@ export default function Onboarding() {
 								</div>
 
 								<div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-									<a
+									<Link
 										href="/dashboard"
 										style={{
 											display: "inline-flex",
@@ -1132,8 +1152,8 @@ export default function Onboarding() {
 											textDecoration: "none",
 										}}>
 										Go to dashboard →
-									</a>
-									<a
+									</Link>
+									<Link
 										href="/upgrade?plan=pro"
 										style={{
 											display: "inline-flex",
@@ -1148,22 +1168,25 @@ export default function Onboarding() {
 											textDecoration: "none",
 										}}>
 										Upgrade for more sites
-									</a>
+									</Link>
 								</div>
 							</motion.div>
 						)}
 					</AnimatePresence>
+					</div>
 				</div>
 
 				{/* Footer */}
 				<div
 					style={{
-						padding: "14px 36px",
+						padding: "14px 40px",
 						borderTop: `1px solid ${C.border}`,
 						display: "flex",
 						justifyContent: "space-between",
 						alignItems: "center",
 						flexShrink: 0,
+						position: "relative",
+						zIndex: 1,
 					}}>
 					<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textFaint }}>
 						© {new Date().getFullYear()} Traytic
