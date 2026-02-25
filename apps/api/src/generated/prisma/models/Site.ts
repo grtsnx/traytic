@@ -472,10 +472,6 @@ export type SiteUncheckedUpdateManyWithoutOrgNestedInput = {
   deleteMany?: Prisma.SiteScalarWhereInput | Prisma.SiteScalarWhereInput[]
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type SiteCreateNestedOneWithoutGoalsInput = {
   create?: Prisma.XOR<Prisma.SiteCreateWithoutGoalsInput, Prisma.SiteUncheckedCreateWithoutGoalsInput>
   connectOrCreate?: Prisma.SiteCreateOrConnectWithoutGoalsInput
