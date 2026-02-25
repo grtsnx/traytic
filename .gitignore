@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+.next
+out
+build
+*.tsbuildinfo
+
+# Turbo
+.turbo
+
+# Environment variables — never commit real .env
+# .env.example files ARE safe to commit (no real secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+!apps/**/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+*.pem
+
+# Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Vercel
+.vercel
+
+# Next.js
+next-env.d.ts

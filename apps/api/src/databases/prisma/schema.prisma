@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Orgs ────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships OrganizationMember[]
+  sessions    Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      OrganizationMember[]
+  sites        Site[]
+  subscription Subscription?
+}
+
+model OrganizationMember {
+  id        String           @id @default(cuid())
+  userId    String
+  orgId     String
+  role      OrganizationRole @default(MEMBER)
+  createdAt DateTime         @default(now())
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ─── Sites ───────────────────────────────────────────────────────────────────
+
+model Site {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String
+  apiKey    String   @unique @default(cuid())
+  orgId     String
+  public    Boolean  @default(false)
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  goals  Goal[]
+  alerts Alert[]
+
+  @@unique([domain, orgId])
+}
+
+// ─── Goals & Funnels ─────────────────────────────────────────────────────────
+
+model Goal {
+  id        String   @id @default(cuid())
+  siteId    String
+  name      String
+  type      GoalType
+  value     String
+  createdAt DateTime @default(now())
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+}
+
+enum GoalType {
+  URL
+  EVENT
+}
+
+// ─── Alerts ──────────────────────────────────────────────────────────────────
+
+model Alert {
+  id        String   @id @default(cuid())
+  siteId    String
+  name      String
+  metric    String
+  condition String
+  threshold Float
+  channels  Json
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+}
+
+// ─── Billing ─────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id         String             @id @default(cuid())
+  orgId      String             @unique
+  provider   BillingProvider
+  providerId String
+  status     SubscriptionStatus @default(ACTIVE)
+  plan       PlanTier           @default(FREE)
+  currency   String             @default("USD")
+  amount     Int                @default(0)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  orgId      String
+  provider   BillingProvider
+  providerId String        @unique
+  amount     Int
+  currency   String
+  status     InvoiceStatus @default(PENDING)
+  paidAt     DateTime?
+  createdAt  DateTime      @default(now())
+}
+
+enum BillingProvider {
+  PAYSTACK
+  POLAR
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+  PAUSED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  TEAM
+}
