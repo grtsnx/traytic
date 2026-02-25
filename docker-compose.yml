@@ -1,53 +1,78 @@
 version: '3.9'
 
+# All services share one internal network.
+# - Databases are only reachable inside the network (no external ports needed in prod).
+# - API is exposed on 3001, Web on 3000.
+# - The API connects to databases using their service names as hostnames.
+
+networks:
+  traytic:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  redis_data:
+
 services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: traytic_postgres
     restart: unless-stopped
+    networks:
+      - traytic
     environment:
-      POSTGRES_DB: traytic
-      POSTGRES_USER: traytic
-      POSTGRES_PASSWORD: traytic_secret
+      POSTGRES_DB: ${POSTGRES_DB:-traytic}
+      POSTGRES_USER: ${POSTGRES_USER:-traytic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-traytic_secret}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U traytic']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-traytic}']
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # ── ClickHouse ───────────────────────────────────────────────────────────────
   clickhouse:
     image: clickhouse/clickhouse-server:24-alpine
     container_name: traytic_clickhouse
     restart: unless-stopped
+    networks:
+      - traytic
     environment:
-      CLICKHOUSE_DB: traytic
-      CLICKHOUSE_USER: traytic
-      CLICKHOUSE_PASSWORD: traytic_secret
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-traytic}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-traytic}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-traytic_secret}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     ports:
-      - '8123:8123' # HTTP interface
-      - '9000:9000' # Native TCP interface
+      - '8123:8123'
+      - '9000:9000'
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      # Run SQL migrations automatically on first start
       - ./apps/api/src/databases/clickhouse/migrations:/docker-entrypoint-initdb.d
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ['CMD', 'clickhouse-client', '--query', 'SELECT 1']
+      test: ['CMD-SHELL', 'clickhouse-client --user=${CLICKHOUSE_USER:-traytic} --password=${CLICKHOUSE_PASSWORD:-traytic_secret} --query "SELECT 1"']
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # ── Redis ────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: traytic_redis
     restart: unless-stopped
+    networks:
+      - traytic
     ports:
       - '6379:6379'
     volumes:
@@ -58,7 +83,72 @@ services:
       timeout: 5s
       retries: 5
 
-volumes:
-  postgres_data:
-  clickhouse_data:
-  redis_data:
+  # ── API (NestJS + Fastify) ───────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: traytic_api
+    restart: unless-stopped
+    networks:
+      - traytic
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+
+      # Databases — use Docker service names as hostnames, not localhost
+      DATABASE_URL: postgresql://${POSTGRES_USER:-traytic}:${POSTGRES_PASSWORD:-traytic_secret}@postgres:5432/${POSTGRES_DB:-traytic}
+      CLICKHOUSE_HOST: http://clickhouse:8123
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DB:-traytic}
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-traytic}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-traytic_secret}
+      REDIS_URL: redis://redis:6379
+
+      # Auth
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001}
+
+      # URLs
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      API_URL: ${API_URL:-http://localhost:3001}
+
+      # Billing — leave blank to disable
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY:-}
+      PAYSTACK_WEBHOOK_SECRET: ${PAYSTACK_WEBHOOK_SECRET:-}
+      POLAR_ACCESS_TOKEN: ${POLAR_ACCESS_TOKEN:-}
+      POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET:-}
+      POLAR_ORGANIZATION_ID: ${POLAR_ORGANIZATION_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Web (Next.js) ────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # NEXT_PUBLIC_* vars are baked into the JS bundle at build time.
+        # For Coolify: override these in your service's Build Variables.
+        # For local: http://localhost:3001 is fine.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    container_name: traytic_web
+    restart: unless-stopped
+    networks:
+      - traytic
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    depends_on:
+      - api

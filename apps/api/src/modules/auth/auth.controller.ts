@@ -20,7 +20,7 @@ export class AuthController {
         `${process.env.BETTER_AUTH_URL}${req.url}`,
         {
           method: req.method,
-          headers: req.headers as HeadersInit,
+          headers: req.headers as Record<string, string>,
           body: req.method !== 'GET' && req.method !== 'HEAD'
             ? JSON.stringify(req.body)
             : undefined,

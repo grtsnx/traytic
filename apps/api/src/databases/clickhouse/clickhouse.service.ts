@@ -4,7 +4,7 @@ import { createClient, ClickHouseClient } from '@clickhouse/client';
 @Injectable()
 export class ClickhouseService implements OnModuleInit {
   private readonly logger = new Logger(ClickhouseService.name);
-  private client: ClickHouseClient;
+  private client!: ClickHouseClient;
 
   async onModuleInit() {
     this.client = createClient({

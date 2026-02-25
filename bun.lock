@@ -27,6 +27,7 @@
         "better-auth": "^1.2.5",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.1",
+        "fastify": "^4.28.1",
         "maxmind": "^4.3.21",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.1",

@@ -100,12 +100,12 @@ function patchHistory() {
   const push = history.pushState.bind(history)
   const replace = history.replaceState.bind(history)
 
-  history.pushState = (...args) => {
+  history.pushState = (...args: Parameters<typeof history.pushState>) => {
     push(...args)
     sendPageView()
   }
 
-  history.replaceState = (...args) => {
+  history.replaceState = (...args: Parameters<typeof history.replaceState>) => {
     replace(...args)
   }
 

@@ -19,10 +19,10 @@ export enum EventType {
 
 export class EventDto {
   @IsEnum(EventType)
-  type: EventType;
+  type!: EventType;
 
   @IsString()
-  url: string;
+  url!: string;
 
   @IsOptional()
   @IsString()
@@ -83,10 +83,10 @@ export class EventDto {
 
 export class CollectDto {
   @IsString()
-  siteId: string;
+  siteId!: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EventDto)
-  events: EventDto[];
+  events!: EventDto[];
 }
