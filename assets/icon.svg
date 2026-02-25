@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" role="img" aria-label="Traytic icon">
-  <defs>
-    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0ea5e9"/>
-      <stop offset="100%" stop-color="#6366f1"/>
-    </linearGradient>
-  </defs>
-  <path fill="url(#iconGrad)" d="M8 6h6v4h2V6h6v18h-6v-6h-2v6H8V6Z"/>
-  <path stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M24 26l2-4 2 2 3-5 3 3" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="128" fill="white"/>
+  <!-- Three ascending bars — shared baseline -->
+  <rect x="85" y="309" width="85" height="107" rx="21" fill="black" fill-opacity="0.3"/>
+  <rect x="213" y="235" width="85" height="181" rx="21" fill="black" fill-opacity="0.6"/>
+  <rect x="341" y="160" width="85" height="256" rx="21" fill="black"/>
+  <!-- Green trend dot -->
+  <circle cx="384" cy="139" r="26" fill="#4ade80"/>
 </svg>

@@ -85,7 +85,6 @@ services:
 
   # ── API (NestJS + Fastify) ───────────────────────────────────────────────────
   api:
-    profiles: [prod]
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -122,6 +121,12 @@ services:
       POLAR_ACCESS_TOKEN: ${POLAR_ACCESS_TOKEN:-}
       POLAR_WEBHOOK_SECRET: ${POLAR_WEBHOOK_SECRET:-}
       POLAR_ORGANIZATION_ID: ${POLAR_ORGANIZATION_ID:-}
+
+      # Social Auth — leave blank to disable
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -132,7 +137,6 @@ services:
 
   # ── Web (Next.js) ────────────────────────────────────────────────────────────
   web:
-    profiles: [prod]
     build:
       context: .
       dockerfile: apps/web/Dockerfile

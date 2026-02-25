@@ -4,9 +4,10 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-// Prisma evaluates this file before loading .env, so parse it manually
+// Prisma 7 evaluates this file before loading .env — parse it manually.
+// Use process.cwd() (not __dirname) because this runs as ESM.
 try {
-  const lines = readFileSync(join(__dirname, '.env'), 'utf8').split('\n');
+  const lines = readFileSync(join(process.cwd(), '.env'), 'utf8').split('\n');
   for (const line of lines) {
     const t = line.trim();
     if (!t || t.startsWith('#')) continue;
