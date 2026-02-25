@@ -396,7 +396,7 @@ function MainChart({ period }: { period: string }) {
 					))}
 
 					{/* Pageviews area (behind) */}
-					<path d={pvLine.replace(/M/, "M") + ` L${w},${h} L0,${h} Z`} fill="url(#pvGrad)" clipPath="url(#chartClip)" />
+					<path d={pvLine + ` L${w},${h} L0,${h} Z`} fill="url(#pvGrad)" clipPath="url(#chartClip)" />
 					<path d={pvLine} fill="none" stroke={C.accentDim} strokeWidth="1" strokeOpacity="0.35" strokeLinecap="round" clipPath="url(#chartClip)" />
 
 					{/* Visitors area */}
