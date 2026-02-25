@@ -75,6 +75,7 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   members      OrganizationMember[]
+  invitations  Invitation[]
   sites        Site[]
   subscription Subscription?
 }
@@ -96,6 +97,20 @@ enum OrganizationRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+model Invitation {
+  id        String           @id @default(cuid())
+  orgId     String
+  email     String
+  role      OrganizationRole @default(MEMBER)
+  token     String           @unique @default(cuid())
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, email])
 }
 
 // ─── Sites ───────────────────────────────────────────────────────────────────

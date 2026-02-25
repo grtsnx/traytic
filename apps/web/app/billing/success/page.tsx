@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
@@ -34,6 +36,7 @@ function LogoMark({ size = 24 }: { size?: number }) {
 }
 
 export default function BillingSuccess() {
+	const router = useRouter();
 	const [countdown, setCountdown] = useState(5);
 
 	useEffect(() => {
@@ -41,33 +44,31 @@ export default function BillingSuccess() {
 			setCountdown((n) => {
 				if (n <= 1) {
 					clearInterval(interval);
-					window.location.href = "/onboarding";
+					router.push("/onboarding");
 				}
 				return n - 1;
 			});
 		}, 1000);
 		return () => clearInterval(interval);
-	}, []);
+	}, [router]);
 
 	return (
 		<div className="min-h-screen flex flex-col" style={{ backgroundColor: C.bg }}>
 			<header style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: `${C.bg}ee`, backdropFilter: "blur(12px)" }}>
 				<div className="max-w-3xl mx-auto px-6 h-14 flex items-center gap-4">
-					<a
+					<Link
 						href="/"
-						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}
-						onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
-						onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}>
+						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}>
 						<HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
 						<span style={{ fontFamily: C.sans, fontSize: "13px" }}>Back</span>
-					</a>
+					</Link>
 					<div style={{ width: "1px", height: "18px", backgroundColor: C.border }} />
-					<a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+					<Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
 						<LogoMark size={24} />
 						<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
 							Traytic
 						</span>
-					</a>
+					</Link>
 				</div>
 			</header>
 
@@ -113,12 +114,12 @@ export default function BillingSuccess() {
 						animate={{ opacity: 1 }}
 						transition={{ delay: 0.4 }}
 						className="flex flex-col items-center gap-4">
-						<a
+						<Link
 							href="/onboarding"
 							className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 							style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
 							Set up your site →
-						</a>
+						</Link>
 						<p className="text-[12px]" style={{ color: C.textMuted, fontFamily: C.mono }}>
 							Redirecting in {countdown}s…
 						</p>

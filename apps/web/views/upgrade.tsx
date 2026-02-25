@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -213,21 +214,19 @@ export default function Upgrade() {
 			{/* Nav */}
 			<header style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: `${C.bg}ee`, backdropFilter: "blur(12px)" }}>
 				<div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-4">
-					<a
+					<Link
 						href="/"
-						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}
-						onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
-						onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}>
+						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}>
 						<HugeiconsIcon icon={ArrowLeft01Icon} size={18} />
 						<span style={{ fontFamily: C.sans, fontSize: "13px" }}>Back</span>
-					</a>
+					</Link>
 					<div style={{ width: "1px", height: "18px", backgroundColor: C.border }} />
-					<a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+					<Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
 						<LogoMark size={24} />
 						<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
 							Traytic
 						</span>
-					</a>
+					</Link>
 				</div>
 			</header>
 

@@ -57,6 +57,7 @@ export const ModelName = {
   Verification: 'Verification',
   Organization: 'Organization',
   OrganizationMember: 'OrganizationMember',
+  Invitation: 'Invitation',
   Site: 'Site',
   Goal: 'Goal',
   Alert: 'Alert',
@@ -158,6 +159,19 @@ export const OrganizationMemberScalarFieldEnum = {
 } as const
 
 export type OrganizationMemberScalarFieldEnum = (typeof OrganizationMemberScalarFieldEnum)[keyof typeof OrganizationMemberScalarFieldEnum]
+
+
+export const InvitationScalarFieldEnum = {
+  id: 'id',
+  orgId: 'orgId',
+  email: 'email',
+  role: 'role',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type InvitationScalarFieldEnum = (typeof InvitationScalarFieldEnum)[keyof typeof InvitationScalarFieldEnum]
 
 
 export const SiteScalarFieldEnum = {

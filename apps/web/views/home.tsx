@@ -1,8 +1,18 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion, useInView, AnimatePresence } from "motion/react";
 import Link from "next/link";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+type SessionState = {
+	loggedIn: boolean;
+	hasSites: boolean;
+	ctaHref: string;
+	ctaLabel: string;
+	ctaLabelShort: string;
+};
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -43,7 +53,7 @@ const PLANS: Plan[] = [
 		price: "0",
 		priceNGN: "0",
 		period: "forever",
-		desc: "Get started instantly. No credit card needed. One site, full analytics.",
+		desc: "Zero dollars, zero catches. One site, full analytics. Your accountant will be confused.",
 		features: ["1 site", "50,000 events / month", "Real-time dashboard", "6-month data retention", "Community support"],
 		siteLimit: "1 site",
 		cta: "Get started free",
@@ -55,7 +65,7 @@ const PLANS: Plan[] = [
 		price: "5",
 		priceNGN: "7,900",
 		period: "/ month",
-		desc: "More sites, more data. We handle infra, uptime, and backups.",
+		desc: "More sites, more data. We handle infra so you don't have to wake up at 3 AM.",
 		features: ["Up to 10 sites", "1M events / month", "1-year data retention", "Email & Slack alerts", "Priority support"],
 		siteLimit: "Up to 10 sites",
 		cta: "Start free trial",
@@ -67,7 +77,7 @@ const PLANS: Plan[] = [
 		price: "19",
 		priceNGN: "29,900",
 		period: "/ month",
-		desc: "For teams that need scale, unlimited sites, and dedicated support.",
+		desc: "For teams that need scale. Unlimited everything, because limits are for consent banners.",
 		features: ["Unlimited sites", "10M events / month", "Everything in Pro", "Unlimited team seats", "Custom goals & funnels"],
 		siteLimit: "Unlimited sites",
 		cta: "Start free trial",
@@ -81,13 +91,13 @@ const STEPS: Step[] = [
 	{
 		n: "01",
 		title: "Install the SDK",
-		desc: "One command. Sub-3kb gzipped. Works with npm, yarn, pnpm, or bun.",
+		desc: "One command. Sub-3kb gzipped. Smaller than most favicons. Works with npm, yarn, pnpm, or bun.",
 		code: "npm install @traytic/analytics",
 	},
 	{
 		n: "02",
 		title: "Add to your layout",
-		desc: "Drop the component into your root layout. Configure your site ID and you're done.",
+		desc: "Drop the component into your root layout. Configure your site ID. That's it. No, really. That's it.",
 		code: `import { Analytics } from '@traytic/analytics/next'
 
 export default function RootLayout({ children }) {
@@ -102,7 +112,7 @@ export default function RootLayout({ children }) {
 	{
 		n: "03",
 		title: "See it live",
-		desc: "Open the dashboard. Real-time data streams in the moment your first visitor lands.",
+		desc: "Open the dashboard. Real-time data streams in the moment your first visitor lands. Go on, refresh the page.",
 		code: null,
 	},
 ];
@@ -112,25 +122,25 @@ const FEATURES: Feature[] = [
 	{
 		icon: "⬡",
 		title: "No cookies. No consent banners.",
-		desc: "Privacy fingerprinting via SHA-256 hash of site ID, IP, user-agent, and date. Fully GDPR, CCPA, and PECR compliant.",
+		desc: "Privacy fingerprinting via SHA-256 hash of site ID, IP, user-agent, and date. Your lawyers can finally take a vacation. Fully GDPR, CCPA, and PECR compliant.",
 		tag: "Privacy-first",
 	},
 	{
 		icon: "◎",
 		title: "Real-time, sub-second updates.",
-		desc: "SSE-powered live dashboard via RxJS. See every pageview the moment it happens — no polling, no delay.",
+		desc: "SSE-powered live dashboard via RxJS. See every pageview the moment it happens — no polling, no delay, no \"data will be available in 24 hours.\"",
 		tag: "Real-time",
 	},
 	{
 		icon: "▣",
 		title: "Self-hostable in one command.",
-		desc: "Run on your own infra with Docker. Postgres + ClickHouse + Redis. MIT licensed. You own your data.",
+		desc: "Run on your own infra with Docker. Postgres + ClickHouse + Redis. MIT licensed. Your data stays where you put it.",
 		tag: "Self-hostable",
 	},
 	{
 		icon: "◈",
 		title: "Open source, forever.",
-		desc: "Every line of code is public on GitHub. Audit it, fork it, contribute to it. No black boxes.",
+		desc: "Every line of code is public on GitHub. Audit it, fork it, contribute to it. We have nothing to hide (unlike your current analytics provider).",
 		tag: "Open source",
 	},
 ];
@@ -142,7 +152,13 @@ const NAV_LINKS: Array<{ label: string; href: string }> = [
 ];
 
 const PROOF_ITEMS: string[] = ["No cookies", "GDPR compliant", "Self-hostable", "<3kb SDK"];
-const FOOTER_LINKS: string[] = ["Docs", "GitHub", "Twitter", "Privacy"];
+const FOOTER_LINKS: Array<{ label: string; href: string; external?: boolean }> = [
+	{ label: "Docs", href: "#how-it-works" },
+	{ label: "GitHub", href: "https://github.com/traytic/traytic", external: true },
+	{ label: "Twitter", href: "https://twitter.com/traytic", external: true },
+	{ label: "Privacy", href: "/privacy" },
+	{ label: "Terms", href: "/terms" },
+];
 
 // ── FadeIn ─────────────────────────────────────────────────────────────────────
 function FadeIn({
@@ -272,7 +288,7 @@ function CloseIcon() {
 }
 
 // ── Nav ────────────────────────────────────────────────────────────────────────
-function Nav() {
+function Nav({ session }: { session: SessionState }) {
 	const [open, setOpen] = useState<boolean>(false);
 
 	return (
@@ -310,12 +326,12 @@ function Nav() {
 					</nav>
 
 					<div className="flex items-center gap-2">
-						<a
-							href="#pricing"
+						<Link
+							href={session.loggedIn ? session.ctaHref : "#pricing"}
 							className="hidden sm:inline-flex px-4 py-1.5 text-[13px] font-medium rounded-md transition-opacity hover:opacity-90"
 							style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-							Get started
-						</a>
+							{session.loggedIn ? session.ctaLabelShort : "Get started"}
+						</Link>
 
 						{/* Hamburger — mobile only */}
 						<button
@@ -346,17 +362,17 @@ function Nav() {
 							style={{ backgroundColor: "oklch(0 0 0 / 65%)" }}
 						/>
 
-						{/* Sheet panel */}
+						{/* Sheet panel — full screen */}
 						<motion.div
-							className="fixed top-0 right-0 h-full w-72 z-60 md:hidden flex flex-col"
-							initial={{ x: "100%" }}
-							animate={{ x: 0 }}
-							exit={{ x: "100%" }}
-							transition={{ type: "spring", damping: 28, stiffness: 220 }}
-							style={{ backgroundColor: C.surface, borderLeft: `1px solid ${C.border}` }}>
+							className="fixed inset-0 z-60 md:hidden flex flex-col"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2 }}
+							style={{ backgroundColor: C.surface }}>
 
 							{/* Sheet header */}
-							<div className="flex items-center justify-between px-5 h-14 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+							<div className="flex items-center justify-between px-6 h-14 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
 								<div className="flex items-center gap-2">
 									<LogoMark size={24} />
 									<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
@@ -372,25 +388,25 @@ function Nav() {
 								</button>
 							</div>
 
-							{/* Nav links */}
-							<nav className="flex flex-col px-3 py-3 gap-0.5 flex-1">
+							{/* Nav links — centered */}
+							<nav className="flex flex-col items-center justify-center gap-2 flex-1">
 								{NAV_LINKS.map((item: { label: string; href: string }) => (
 									<a
 										key={item.href}
 										href={item.href}
 										onClick={() => setOpen(false)}
-										className="px-3 py-3 text-[14px] rounded-lg"
+										className="px-4 py-3 text-[18px] font-medium rounded-lg"
 										style={{ color: C.text, fontFamily: C.sans, textDecoration: "none" }}>
 										{item.label}
 									</a>
 								))}
-								<div className="my-2" style={{ height: 1, backgroundColor: C.border }} />
+								<div className="my-2 w-16" style={{ height: 1, backgroundColor: C.border }} />
 								<a
 									href="https://github.com/traytic/traytic"
 									target="_blank"
 									rel="noopener noreferrer"
 									onClick={() => setOpen(false)}
-									className="flex items-center gap-2.5 px-3 py-3 text-[14px] rounded-lg"
+									className="flex items-center gap-2.5 px-4 py-3 text-[18px] font-medium rounded-lg"
 									style={{ color: C.text, fontFamily: C.sans, textDecoration: "none" }}>
 									<GitHubIcon /> GitHub
 								</a>
@@ -398,14 +414,14 @@ function Nav() {
 							</nav>
 
 							{/* Sheet CTA */}
-							<div className="px-3 pb-6 shrink-0">
-								<a
-									href="#pricing"
+							<div className="px-6 pb-8 shrink-0">
+								<Link
+									href={session.loggedIn ? session.ctaHref : "/onboarding"}
 									onClick={() => setOpen(false)}
-									className="flex items-center justify-center w-full py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
+									className="flex items-center justify-center w-full py-3.5 text-[15px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 									style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-									Get started free →
-								</a>
+									{session.loggedIn ? session.ctaLabel : "Get started free →"}
+								</Link>
 							</div>
 						</motion.div>
 					</>
@@ -416,7 +432,7 @@ function Nav() {
 }
 
 // ── Hero ───────────────────────────────────────────────────────────────────────
-function Hero() {
+function Hero({ session }: { session: SessionState }) {
 	return (
 		<section className="pt-32 pb-24 px-6">
 			<div className="max-w-3xl mx-auto text-center">
@@ -452,8 +468,8 @@ function Hero() {
 					transition={{ duration: 0.5, delay: 0.16, ease: [0.25, 0.1, 0.25, 1] }}
 					className="text-[17px] leading-relaxed mb-10 max-w-xl mx-auto"
 					style={{ color: C.textMuted, fontFamily: C.sans }}>
-					Privacy-first, real-time web analytics. No cookies, no consent banners, no tracking scripts.
-					Self-hostable and open source.
+				Privacy-first, real-time web analytics. No cookies, no consent banners, no creepy tracking scripts following your users around the internet.
+				Self-hostable and open source.
 				</motion.p>
 
 				<motion.div
@@ -462,10 +478,10 @@ function Hero() {
 					transition={{ duration: 0.5, delay: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
 					className="flex flex-wrap items-center justify-center gap-3">
 					<Link
-						href="/onboarding"
+						href={session.loggedIn ? session.ctaHref : "/onboarding"}
 						className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 						style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-					Get started free →
+					{session.loggedIn ? session.ctaLabel : "Get started free →"}
 				</Link>
 					<a
 						href="https://github.com/traytic/traytic"
@@ -620,7 +636,7 @@ function HowItWorks() {
 }
 
 // ── Pricing ────────────────────────────────────────────────────────────────────
-function Pricing() {
+function Pricing({ session }: { session: SessionState }) {
 	return (
 		<section id="pricing" className="py-20 px-6" style={{ borderTop: `1px solid ${C.border}` }}>
 			<div className="max-w-5xl mx-auto">
@@ -697,7 +713,7 @@ function Pricing() {
 								</ul>
 
 								<Link
-									href={plan.ctaHref}
+									href={session.loggedIn && plan.price === "0" ? session.ctaHref : plan.ctaHref}
 									className="w-full py-2.5 text-[13px] font-semibold rounded-lg transition-opacity hover:opacity-90 text-center"
 									style={{
 										backgroundColor: plan.highlight ? C.accent : "transparent",
@@ -707,7 +723,7 @@ function Pricing() {
 										textDecoration: "none",
 										display: "block",
 									}}>
-									{plan.cta}
+									{session.loggedIn && plan.price === "0" ? session.ctaLabelShort : plan.cta}
 									</Link>
 							</div>
 						</FadeIn>
@@ -725,7 +741,7 @@ function Pricing() {
 }
 
 // ── CTA Banner ─────────────────────────────────────────────────────────────────
-function CTABanner() {
+function CTABanner({ session }: { session: SessionState }) {
 	return (
 		<section
 			className="py-20 px-6 text-center"
@@ -736,14 +752,14 @@ function CTABanner() {
 						Ready to drop the consent banner?
 					</h2>
 					<p className="text-[15px] mb-8" style={{ color: C.textMuted, fontFamily: C.sans }}>
-						Start tracking in minutes. Free plan — 1 site, 50k events, no credit card.
+						Start tracking in minutes. Free plan — 1 site, 50K events, no credit card. Your users will thank you. Silently. Because we don&apos;t track that.
 					</p>
 					<div className="flex flex-wrap items-center justify-center gap-3">
 						<Link
-							href="/onboarding"
+							href={session.loggedIn ? session.ctaHref : "/onboarding"}
 							className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 							style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-					Get started free →
+					{session.loggedIn ? session.ctaLabel : "Get started free →"}
 				</Link>
 						<a
 							href="https://github.com/traytic/traytic"
@@ -778,17 +794,29 @@ function Footer() {
 					</span>
 				</div>
 
-				<div className="flex flex-wrap justify-center items-center gap-4">
-					{FOOTER_LINKS.map((link) => (
+			<div className="flex flex-wrap justify-center items-center gap-4">
+				{FOOTER_LINKS.map((link: { label: string; href: string; external?: boolean }) =>
+					link.external ? (
 						<a
-							key={link}
-							href="#"
+							key={link.label}
+							href={link.href}
+							target="_blank"
+							rel="noopener noreferrer"
 							className="text-[12px] transition-opacity hover:opacity-80"
 							style={{ color: C.textMuted, fontFamily: C.sans, textDecoration: "none" }}>
-							{link}
+							{link.label}
 						</a>
-					))}
-				</div>
+					) : (
+						<Link
+							key={link.label}
+							href={link.href}
+							className="text-[12px] transition-opacity hover:opacity-80"
+							style={{ color: C.textMuted, fontFamily: C.sans, textDecoration: "none" }}>
+							{link.label}
+						</Link>
+					)
+				)}
+			</div>
 
 				<p className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.mono }}>
 					MIT license · © 2026 Traytic
@@ -800,16 +828,60 @@ function Footer() {
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
+const DEFAULT_SESSION: SessionState = {
+	loggedIn: false,
+	hasSites: false,
+	ctaHref: "/onboarding",
+	ctaLabel: "Get started free →",
+	ctaLabelShort: "Get started",
+};
+
 export default function Home() {
+	const [session, setSession] = useState<SessionState>(DEFAULT_SESSION);
+
+	useEffect(() => {
+		(async () => {
+			try {
+				const authRes = await fetch(`${API}/api/auth/get-session`, { credentials: "include" });
+				if (!authRes.ok) return;
+				const authData = (await authRes.json()) as { user?: { id: string } } | null;
+				if (!authData?.user) return;
+
+				const sitesRes = await fetch(`${API}/sites`, { credentials: "include" });
+				const sites = sitesRes.ok ? ((await sitesRes.json()) as { id: string }[]) : [];
+
+				if (sites.length > 0) {
+					setSession({
+						loggedIn: true,
+						hasSites: true,
+						ctaHref: "/dashboard",
+						ctaLabel: "Dashboard →",
+						ctaLabelShort: "Dashboard",
+					});
+				} else {
+					setSession({
+						loggedIn: true,
+						hasSites: false,
+						ctaHref: "/onboarding?step=add-site",
+						ctaLabel: "Add your site →",
+						ctaLabelShort: "Add site",
+					});
+				}
+			} catch {
+				// not logged in, keep defaults
+			}
+		})();
+	}, []);
+
 	return (
 		<div style={{ backgroundColor: C.bg, minHeight: "100vh" }}>
-			<Nav />
+			<Nav session={session} />
 			<main>
-				<Hero />
+				<Hero session={session} />
 				<Features />
 				<HowItWorks />
-				<Pricing />
-				<CTABanner />
+				<Pricing session={session} />
+				<CTABanner session={session} />
 			</main>
 			<Footer />
 		</div>

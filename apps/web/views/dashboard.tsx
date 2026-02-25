@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { motion, AnimatePresence } from "motion/react";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -819,10 +822,14 @@ function Sidebar({
 	active,
 	onNav,
 	liveCount,
+	onLogout,
+	onClose,
 }: {
 	active: string;
 	onNav: (id: string) => void;
 	liveCount: number;
+	onLogout: () => void;
+	onClose?: () => void;
 }) {
 	return (
 		<div
@@ -838,29 +845,51 @@ function Sidebar({
 				top: 0,
 				overflowY: "auto",
 			}}>
-			{/* Logo */}
-			<div
-				style={{
-					padding: "20px 20px",
-					borderBottom: `1px solid ${C.border}`,
-					display: "flex",
-					alignItems: "center",
-					gap: "10px",
-				}}>
-				<a href="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
-					<LogoMark size={28} />
-					<span
-						style={{
-							fontFamily: C.display,
-							fontSize: "15px",
-							fontWeight: "700",
-							color: C.text,
-							letterSpacing: "-0.02em",
-						}}>
-						Traytic
-					</span>
-				</a>
-			</div>
+		{/* Logo */}
+		<div
+			style={{
+				padding: "20px 20px",
+				borderBottom: `1px solid ${C.border}`,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+			}}>
+			<Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+				<LogoMark size={28} />
+				<span
+					style={{
+						fontFamily: C.display,
+						fontSize: "15px",
+						fontWeight: "700",
+						color: C.text,
+						letterSpacing: "-0.02em",
+					}}>
+					Traytic
+				</span>
+			</Link>
+			{onClose && (
+				<button
+					onClick={onClose}
+					aria-label="Close menu"
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						width: "28px",
+						height: "28px",
+						borderRadius: "6px",
+						background: "none",
+						border: `1px solid ${C.border}`,
+						color: C.textMuted,
+						cursor: "pointer",
+					}}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+						<line x1="18" y1="6" x2="6" y2="18" />
+						<line x1="6" y1="6" x2="18" y2="18" />
+					</svg>
+				</button>
+			)}
+		</div>
 
 			{/* Site selector */}
 			<div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
@@ -980,43 +1009,72 @@ function Sidebar({
 				))}
 			</nav>
 
-			{/* Upgrade CTA */}
-			<div
+		{/* Upgrade CTA */}
+		<div
+			style={{
+				padding: "14px",
+				margin: "0 10px 14px",
+				borderRadius: "10px",
+				backgroundColor: C.accentBg,
+				border: `1px solid ${C.accentBorder}`,
+			}}>
+			<p
 				style={{
-					padding: "14px",
-					margin: "0 10px 14px",
-					borderRadius: "10px",
-					backgroundColor: C.accentBg,
-					border: `1px solid ${C.accentBorder}`,
+					fontFamily: C.sans,
+					fontSize: "12px",
+					color: C.accentText,
+					marginBottom: "10px",
+					lineHeight: "1.5",
 				}}>
-				<p
-					style={{
-						fontFamily: C.sans,
-						fontSize: "12px",
-						color: C.accentText,
-						marginBottom: "10px",
-						lineHeight: "1.5",
-					}}>
-					Add more sites and unlock higher limits.
-				</p>
-				<a
-					href="/upgrade?plan=pro"
-					style={{
-						display: "block",
-						padding: "7px 12px",
-						borderRadius: "7px",
-						backgroundColor: C.accent,
-						color: "#fff",
-						fontFamily: C.sans,
-						fontSize: "12px",
-						fontWeight: "600",
-						textDecoration: "none",
-						textAlign: "center",
-					}}>
-					Upgrade to Pro →
-				</a>
-			</div>
+				Add more sites and unlock higher limits.
+			</p>
+			<Link
+				href="/upgrade?plan=pro"
+				style={{
+					display: "block",
+					padding: "7px 12px",
+					borderRadius: "7px",
+					backgroundColor: C.accent,
+					color: "#fff",
+					fontFamily: C.sans,
+					fontSize: "12px",
+					fontWeight: "600",
+					textDecoration: "none",
+					textAlign: "center",
+				}}>
+				Upgrade to Pro →
+			</Link>
 		</div>
+
+		{/* Logout */}
+		<div style={{ padding: "0 10px 14px" }}>
+			<button
+				onClick={onLogout}
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: "8px",
+					width: "100%",
+					padding: "9px 12px",
+					borderRadius: "8px",
+					backgroundColor: "transparent",
+					border: `1px solid ${C.border}`,
+					color: C.textMuted,
+					fontFamily: C.sans,
+					fontSize: "13px",
+					cursor: "pointer",
+					transition: "all 0.12s",
+					textAlign: "left",
+				}}>
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+					<polyline points="16 17 21 12 16 7" />
+					<line x1="21" y1="12" x2="9" y2="12" />
+				</svg>
+				Log out
+			</button>
+		</div>
+	</div>
 	);
 }
 
@@ -1029,6 +1087,26 @@ export default function Dashboard() {
 	const [activeNav, setActiveNav] = useState("overview");
 	const [period, setPeriod] = useState<Period>("30d");
 	const [liveCount] = useState(47);
+	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const [loggingOut, setLoggingOut] = useState(false);
+
+	const handleLogout = useCallback(async () => {
+		setLoggingOut(true);
+		try {
+			await fetch(`${API}/api/auth/sign-out`, {
+				method: "POST",
+				credentials: "include",
+			});
+		} catch {
+			// proceed regardless
+		}
+		window.location.href = "/";
+	}, []);
+
+	const handleNav = useCallback((id: string) => {
+		setActiveNav(id);
+		setSidebarOpen(false);
+	}, []);
 
 	const visitorTotal = VISITORS_30D.reduce((a, b) => a + b, 0);
 	const pvTotal = PAGEVIEWS_30D.reduce((a, b) => a + b, 0);
@@ -1038,15 +1116,59 @@ export default function Dashboard() {
 
 	return (
 		<div style={{ display: "flex", minHeight: "100vh", backgroundColor: C.bg }}>
-			{/* Sidebar */}
-			<div style={{ display: "flex" }}>
-				<Sidebar active={activeNav} onNav={setActiveNav} liveCount={liveCount} />
+			{/* Desktop sidebar */}
+			<div className="hidden lg:flex" style={{ flexShrink: 0 }}>
+				<Sidebar active={activeNav} onNav={setActiveNav} liveCount={liveCount} onLogout={handleLogout} />
 			</div>
+
+			{/* Mobile sidebar overlay */}
+			<AnimatePresence>
+				{sidebarOpen && (
+					<>
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2 }}
+							onClick={() => setSidebarOpen(false)}
+							className="lg:hidden"
+							style={{
+								position: "fixed",
+								inset: 0,
+								zIndex: 40,
+								backgroundColor: "oklch(0 0 0 / 60%)",
+							}}
+						/>
+						<motion.div
+							initial={{ x: -280 }}
+							animate={{ x: 0 }}
+							exit={{ x: -280 }}
+							transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+							className="lg:hidden"
+							style={{
+								position: "fixed",
+								top: 0,
+								left: 0,
+								bottom: 0,
+								zIndex: 50,
+							}}>
+							<Sidebar
+								active={activeNav}
+								onNav={handleNav}
+								liveCount={liveCount}
+								onLogout={handleLogout}
+								onClose={() => setSidebarOpen(false)}
+							/>
+						</motion.div>
+					</>
+				)}
+			</AnimatePresence>
 
 			{/* Main */}
 			<div style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
 				{/* Top bar */}
 				<div
+					className="px-4 sm:px-7"
 					style={{
 						position: "sticky",
 						top: 0,
@@ -1054,13 +1176,37 @@ export default function Dashboard() {
 						backgroundColor: `${C.bg}e8`,
 						backdropFilter: "blur(16px)",
 						borderBottom: `1px solid ${C.border}`,
-						padding: "14px 28px",
+						padding: "14px",
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "space-between",
-						gap: "16px",
+						gap: "12px",
 					}}>
-					<div>
+					{/* Hamburger for mobile */}
+					<button
+						onClick={() => setSidebarOpen(true)}
+						className="lg:hidden"
+						aria-label="Open menu"
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							width: "36px",
+							height: "36px",
+							borderRadius: "8px",
+							backgroundColor: C.surface,
+							border: `1px solid ${C.border}`,
+							cursor: "pointer",
+							flexShrink: 0,
+						}}>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.text} strokeWidth="2" strokeLinecap="round">
+							<line x1="3" y1="6" x2="21" y2="6" />
+							<line x1="3" y1="12" x2="21" y2="12" />
+							<line x1="3" y1="18" x2="21" y2="18" />
+						</svg>
+					</button>
+
+					<div style={{ minWidth: 0 }}>
 						<h1
 							style={{
 								fontFamily: C.display,
@@ -1086,13 +1232,16 @@ export default function Dashboard() {
 							borderRadius: "9px",
 							padding: "3px",
 							border: `1px solid ${C.border}`,
+							flexShrink: 0,
 						}}>
 						{PERIODS.map((p) => (
 							<button
 								key={p}
 								onClick={() => setPeriod(p)}
+								className="px-2 sm:px-3.5"
 								style={{
-									padding: "6px 14px",
+									paddingTop: "6px",
+									paddingBottom: "6px",
 									borderRadius: "7px",
 									fontSize: "12px",
 									fontWeight: period === p ? "600" : "400",
@@ -1111,15 +1260,10 @@ export default function Dashboard() {
 				</div>
 
 				{/* Content */}
-				<div style={{ padding: "28px" }}>
+				<div className="p-4 sm:p-7">
 					{/* Metric cards */}
 					<div
-						style={{
-							display: "grid",
-							gap: "14px",
-							marginBottom: "20px",
-						}}
-						className="grid-cols-2 sm:grid-cols-4">
+						className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
 						<MetricCard
 							label="Unique visitors"
 							value={fmt(visitorTotal)}
@@ -1161,29 +1305,41 @@ export default function Dashboard() {
 					</div>
 
 					{/* Tables row */}
-					<div
-						style={{
-							display: "grid",
-							gridTemplateColumns: "1fr 1fr",
-							gap: "14px",
-							marginBottom: "14px",
-						}}>
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 mb-3.5">
 						<TopPagesTable />
 						<TopSourcesTable />
 					</div>
 
 					{/* Breakdown row */}
-					<div
-						style={{
-							display: "grid",
-							gridTemplateColumns: "1fr 1fr",
-							gap: "14px",
-						}}>
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
 						<DevicesBreakdown />
 						<CountriesBreakdown />
 					</div>
 				</div>
 			</div>
+
+			{/* Logging out overlay */}
+			<AnimatePresence>
+				{loggingOut && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						style={{
+							position: "fixed",
+							inset: 0,
+							zIndex: 100,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							backgroundColor: `${C.bg}e8`,
+							backdropFilter: "blur(8px)",
+						}}>
+						<span style={{ fontFamily: C.mono, fontSize: "14px", color: C.textMuted }}>
+							Logging out…
+						</span>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 }
