@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Public_Sans } from "next/font/google";
-import { MaxWidthWrapper, ThemeProvider } from "@/lib";
+import { ThemeProvider } from "@/lib";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const publicSans = Public_Sans({ subsets: ["latin"], variable: "--font-sans" });
+const publicSans = Public_Sans({ subsets: ["latin"] as const, variable: "--font-sans" });
 
 const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
-	subsets: ["latin"],
+	subsets: ["latin"] as const,
 });
 
 export const metadata: Metadata = {
@@ -19,22 +19,22 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
 	children,
-}: Readonly<{
+}: {
 	children: React.ReactNode;
-}>) {
+}) {
 	return (
 		<html
 			lang="en"
 			suppressHydrationWarning
 			className={publicSans.variable}>
 			<body
-				className={`${geistMono.variable} m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased`}>
+				className={`${geistMono.variable} min-h-screen bg-background scroll-smooth antialiased`}>
 				<ThemeProvider
 					attribute="class"
-					defaultTheme="light"
-					enableSystem
+					defaultTheme="dark"
+					enableSystem={false}
 					disableTransitionOnChange>
-					<MaxWidthWrapper>{children}</MaxWidthWrapper>
+					{children}
 					<Toaster
 						position="top-right"
 						expand={false}
