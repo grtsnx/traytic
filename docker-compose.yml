@@ -85,6 +85,7 @@ services:
 
   # ── API (NestJS + Fastify) ───────────────────────────────────────────────────
   api:
+    profiles: [prod]
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -131,6 +132,7 @@ services:
 
   # ── Web (Next.js) ────────────────────────────────────────────────────────────
   web:
+    profiles: [prod]
     build:
       context: .
       dockerfile: apps/web/Dockerfile

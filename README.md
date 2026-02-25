@@ -73,7 +73,7 @@ traytic/
 
 ## Quick Start (Docker)
 
-The fastest way to run Traytic. One command spins up everything — databases, API, and web app.
+The fastest way to run Traytic. One command builds and runs everything — databases, API, and web app.
 
 ### 1. Clone
 
@@ -101,7 +101,7 @@ Everything else (database URLs, ports, hostnames) is pre-configured for Docker a
 ### 3. Build and run
 
 ```bash
-docker compose up --build
+docker compose --profile prod up --build
 ```
 
 | Service | URL |
@@ -133,7 +133,7 @@ bun install
 ### 2. Start databases only
 
 ```bash
-docker compose up postgres clickhouse redis -d
+docker compose up -d
 ```
 
 ### 3. Configure environment

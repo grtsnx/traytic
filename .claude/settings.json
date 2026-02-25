@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(~/.bun/bin/bun x tsc --noEmit -p /Users/grtsnx/programming/nextjs/traytic/packages/sdk/tsconfig.json)"
+      "Bash(~/.bun/bin/bun x tsc --noEmit -p /Users/grtsnx/programming/nextjs/traytic/packages/sdk/tsconfig.json)",
+      "Bash(~/.bun/bin/bun add @fastify/static --cwd apps/api)"
     ]
   }
 }
