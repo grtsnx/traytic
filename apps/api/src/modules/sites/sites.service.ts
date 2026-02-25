@@ -1,9 +1,109 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../databases/prisma/prisma.service';
+import { OrganizationRole, PlanTier } from '../../generated/prisma/client';
+import { PLAN_LIMITS } from '@traytic/types';
 
 @Injectable()
 export class SitesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // ─── User-scoped methods (authenticated controllers) ──────────────────────
+
+  /** All sites across every org the user belongs to */
+  async findByUserId(userId: string) {
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: { userId },
+      select: { orgId: true },
+    });
+    const orgIds = memberships.map((m) => m.orgId);
+    if (!orgIds.length) return [];
+    return this.prisma.site.findMany({
+      where: { orgId: { in: orgIds } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** Get the user's first org, or create a personal one if they have none */
+  private async getOrCreateOrgForUser(userId: string): Promise<string> {
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { userId },
+    });
+    if (membership) return membership.orgId;
+
+    const org = await this.prisma.organization.create({
+      data: {
+        name: 'Personal',
+        slug: `org-${userId.slice(0, 8)}-${Date.now()}`,
+        members: {
+          create: { userId, role: OrganizationRole.OWNER },
+        },
+      },
+    });
+    return org.id;
+  }
+
+  /** Create a site for the user, enforcing the plan's site limit */
+  async createForUser(
+    userId: string,
+    data: { name: string; domain: string; timezone?: string },
+  ) {
+    const orgId = await this.getOrCreateOrgForUser(userId);
+
+    const [siteCount, subscription] = await Promise.all([
+      this.prisma.site.count({ where: { orgId } }),
+      this.prisma.subscription.findUnique({ where: { orgId } }),
+    ]);
+
+    const plan = (subscription?.plan ?? PlanTier.FREE) as keyof typeof PLAN_LIMITS;
+    const limit = PLAN_LIMITS[plan].siteLimit;
+
+    if (limit !== null && siteCount >= limit) {
+      throw new ForbiddenException(
+        `Your ${plan} plan allows ${limit} site${limit === 1 ? '' : 's'}. Upgrade to add more.`,
+      );
+    }
+
+    return this.prisma.site.create({ data: { ...data, orgId } });
+  }
+
+  async updateForUser(
+    id: string,
+    userId: string,
+    data: { name?: string; domain?: string; public?: boolean },
+  ) {
+    await this.assertUserOwnsSite(id, userId);
+    return this.prisma.site.update({ where: { id }, data });
+  }
+
+  async deleteForUser(id: string, userId: string) {
+    await this.assertUserOwnsSite(id, userId);
+    return this.prisma.site.delete({ where: { id } });
+  }
+
+  async rotateApiKeyForUser(id: string, userId: string) {
+    await this.assertUserOwnsSite(id, userId);
+    const apiKey = crypto.randomUUID().replace(/-/g, '');
+    return this.prisma.site.update({ where: { id }, data: { apiKey } });
+  }
+
+  /** Returns true if the user is a member of the org that owns the site */
+  async userOwnsSite(userId: string, siteId: string): Promise<boolean> {
+    const site = await this.prisma.site.findFirst({
+      where: { id: siteId, org: { members: { some: { userId } } } },
+    });
+    return !!site;
+  }
+
+  private async assertUserOwnsSite(siteId: string, userId: string) {
+    if (!(await this.userOwnsSite(userId, siteId)))
+      throw new NotFoundException('Site not found');
+  }
+
+  // ─── Internal / legacy helpers ─────────────────────────────────────────────
 
   async findByOrg(orgId: string) {
     return this.prisma.site.findMany({
@@ -14,31 +114,5 @@ export class SitesService {
 
   async findByApiKey(apiKey: string) {
     return this.prisma.site.findUnique({ where: { apiKey } });
-  }
-
-  async create(orgId: string, data: { name: string; domain: string; timezone?: string }) {
-    return this.prisma.site.create({
-      data: { ...data, orgId },
-    });
-  }
-
-  async update(id: string, orgId: string, data: { name?: string; domain?: string; public?: boolean }) {
-    const site = await this.prisma.site.findFirst({ where: { id, orgId } });
-    if (!site) throw new NotFoundException('Site not found');
-    return this.prisma.site.update({ where: { id }, data });
-  }
-
-  async delete(id: string, orgId: string) {
-    const site = await this.prisma.site.findFirst({ where: { id, orgId } });
-    if (!site) throw new NotFoundException('Site not found');
-    return this.prisma.site.delete({ where: { id } });
-  }
-
-  async rotateApiKey(id: string, orgId: string) {
-    const site = await this.prisma.site.findFirst({ where: { id, orgId } });
-    if (!site) throw new NotFoundException('Site not found');
-    // Generate new random API key
-    const apiKey = crypto.randomUUID().replace(/-/g, '');
-    return this.prisma.site.update({ where: { id }, data: { apiKey } });
   }
 }

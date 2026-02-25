@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView } from "motion/react";
+import React, { useRef, useState } from "react";
+import { motion, useInView, AnimatePresence } from "motion/react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -26,9 +26,11 @@ const C = {
 type Plan = {
 	name: string;
 	price: string;
+	priceNGN: string;
 	period: string;
 	desc: string;
 	features: string[];
+	siteLimit: string;
 	cta: string;
 	highlight: boolean;
 };
@@ -37,27 +39,33 @@ const PLANS: Plan[] = [
 	{
 		name: "Free",
 		price: "0",
+		priceNGN: "0",
 		period: "forever",
-		desc: "Self-host on your own servers. Full control, zero cost, MIT licensed.",
-		features: ["Unlimited events", "Unlimited sites", "Real-time dashboard", "Full REST API", "Community support"],
-		cta: "Start self-hosting",
+		desc: "Get started instantly. No credit card needed. One site, full analytics.",
+		features: ["1 site", "50,000 events / month", "Real-time dashboard", "6-month data retention", "Community support"],
+		siteLimit: "1 site",
+		cta: "Get started free",
 		highlight: false,
 	},
 	{
 		name: "Pro",
-		price: "9",
+		price: "5",
+		priceNGN: "7,900",
 		period: "/ month",
-		desc: "Managed cloud. We handle infra, uptime, and backups. You ship products.",
-		features: ["Everything in Free", "Managed cloud hosting", "5M events / month", "Email & Slack alerts", "Priority email support"],
+		desc: "More sites, more data. We handle infra, uptime, and backups.",
+		features: ["Up to 10 sites", "1M events / month", "1-year data retention", "Email & Slack alerts", "Priority support"],
+		siteLimit: "Up to 10 sites",
 		cta: "Start free trial",
 		highlight: true,
 	},
 	{
 		name: "Team",
-		price: "29",
+		price: "19",
+		priceNGN: "29,900",
 		period: "/ month",
-		desc: "For teams that need scale, more seats, and dedicated support.",
-		features: ["Everything in Pro", "Unlimited team seats", "50M events / month", "Custom goals & funnels", "Dedicated support"],
+		desc: "For teams that need scale, unlimited sites, and dedicated support.",
+		features: ["Unlimited sites", "10M events / month", "Everything in Pro", "Unlimited team seats", "Custom goals & funnels"],
+		siteLimit: "Unlimited sites",
 		cta: "Start free trial",
 		highlight: false,
 	},
@@ -155,6 +163,21 @@ function FadeIn({
 	);
 }
 
+// ── Logo ───────────────────────────────────────────────────────────────────────
+function LogoMark({ size = 24 }: { size?: number }) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<rect width="24" height="24" rx="6" fill={C.accent} />
+			{/* Three ascending bars — shared baseline at y=19.5 */}
+			<rect x="4" y="14.5" width="4" height="5" rx="1" fill="white" fillOpacity="0.55" />
+			<rect x="10" y="11" width="4" height="8.5" rx="1" fill="white" fillOpacity="0.8" />
+			<rect x="16" y="7.5" width="4" height="12" rx="1" fill="white" />
+			{/* Trend dot on tallest bar */}
+			<circle cx="18" cy="6.5" r="1.2" fill={C.green} />
+		</svg>
+	);
+}
+
 // ── Icons ──────────────────────────────────────────────────────────────────────
 function GitHubIcon() {
 	return (
@@ -180,58 +203,210 @@ function SmallCheckIcon() {
 	);
 }
 
+function HeartIcon() {
+	return (
+		<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+			<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+		</svg>
+	);
+}
+
+function SponsorButton({ variant = "nav" }: { variant?: "nav" | "footer" | "sheet" }) {
+	const isFooter = variant === "footer";
+	const isSheet = variant === "sheet";
+	return (
+		<a
+			href="https://github.com/sponsors/grtsnx"
+			target="_blank"
+			rel="noopener noreferrer"
+			className={`flex items-center gap-1.5 font-medium transition-opacity hover:opacity-90 ${
+				isFooter
+					? "px-4 py-2 text-[13px] rounded-lg"
+					: isSheet
+						? "px-3 py-3 text-[14px] rounded-lg"
+						: "px-3 py-1.5 text-[13px] rounded-md"
+			}`}
+			style={{
+				color: "oklch(0.82 0.14 10)",
+				backgroundColor: "oklch(0.65 0.18 10 / 12%)",
+				border: "1px solid oklch(0.65 0.18 10 / 25%)",
+				fontFamily: C.sans,
+				textDecoration: "none",
+			}}>
+			<HeartIcon />
+			Sponsor
+		</a>
+	);
+}
+
+// ── YC Logo ────────────────────────────────────────────────────────────────────
+// Official Y Combinator logo — exact paths from the public SVG asset.
+// viewBox 0 0 32 32: orange square + white "Y" letterform.
+function YCIcon({ size = 18 }: { size?: number }) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+			{/* Orange background */}
+			<path d="M0 0h32v32H0z" fill="#F26625" />
+			{/* White Y letterform */}
+			<path
+				d="M14.933 18.133L9.387 7.787h2.56l3.2 6.507c0 .107.107.213.213.32s.107.213.213.427l.107.107v.107c.107.213.107.32.213.533.107.107.107.32.213.427.107-.32.32-.533.427-.96.107-.32.32-.64.533-.96l3.2-6.507h2.347L17.067 18.24v6.613h-2.133z"
+				fill="#fff"
+			/>
+		</svg>
+	);
+}
+
+// ── CloseIcon ──────────────────────────────────────────────────────────────────
+function CloseIcon() {
+	return (
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+			<line x1="18" y1="6" x2="6" y2="18" />
+			<line x1="6" y1="6" x2="18" y2="18" />
+		</svg>
+	);
+}
+
 // ── Nav ────────────────────────────────────────────────────────────────────────
 function Nav() {
+	const [open, setOpen] = useState<boolean>(false);
+
 	return (
-		<header
-			className="fixed top-0 left-0 right-0 z-50"
-			style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: `${C.bg}ee`, backdropFilter: "blur(12px)" }}>
-			<div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-				<a href="/" className="flex items-center gap-2" style={{ textDecoration: "none" }}>
-					<div
-						className="w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold"
-						style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.mono }}>
-						T
-					</div>
-					<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
-						Traytic
-					</span>
-				</a>
-
-				<nav className="hidden md:flex items-center gap-1">
-					{NAV_LINKS.map((item: { label: string; href: string }) => (
-						<a
-							key={item.href}
-							href={item.href}
-							className="px-3 py-1.5 text-[13px] rounded-md transition-colors"
-							style={{
-								color: C.textMuted,
-								fontFamily: C.sans,
-								textDecoration: "none",
-								// CSS var trick — hover handled via Tailwind arbitrary
-								"--hover-text": C.text,
-							} as React.CSSProperties}>
-							{item.label}
-						</a>
-					))}
-					<a
-						href="https://github.com/traytic/traytic"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="px-3 py-1.5 text-[13px] rounded-md transition-colors flex items-center gap-1.5"
-						style={{ color: C.textMuted, fontFamily: C.sans, textDecoration: "none" }}>
-						<GitHubIcon /> GitHub
+		<>
+			<header
+				className="fixed top-0 left-0 right-0 z-50"
+				style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: `${C.bg}ee`, backdropFilter: "blur(12px)" }}>
+				<div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+					<a href="/" className="flex items-center gap-2" style={{ textDecoration: "none" }}>
+						<LogoMark size={24} />
+						<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
+							Traytic
+						</span>
 					</a>
-				</nav>
 
-				<a
-					href="#pricing"
-					className="px-4 py-1.5 text-[13px] font-medium rounded-md transition-opacity hover:opacity-90"
-					style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-					Get started
-				</a>
-			</div>
-		</header>
+					<nav className="hidden md:flex items-center gap-1">
+						{NAV_LINKS.map((item: { label: string; href: string }) => (
+							<a
+								key={item.href}
+								href={item.href}
+								className="px-3 py-1.5 text-[13px] rounded-md transition-colors"
+								style={{ color: C.textMuted, fontFamily: C.sans, textDecoration: "none" } as React.CSSProperties}>
+								{item.label}
+							</a>
+						))}
+						<a
+							href="https://github.com/grtsnx/traytic"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="px-3 py-1.5 text-[13px] rounded-md transition-colors flex items-center gap-1.5"
+							style={{ color: C.textMuted, fontFamily: C.sans, textDecoration: "none" }}>
+							<GitHubIcon /> GitHub
+						</a>
+						<SponsorButton variant="nav" />
+					</nav>
+
+					<div className="flex items-center gap-2">
+						<a
+							href="#pricing"
+							className="hidden sm:inline-flex px-4 py-1.5 text-[13px] font-medium rounded-md transition-opacity hover:opacity-90"
+							style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
+							Get started
+						</a>
+
+						{/* Hamburger — mobile only */}
+						<button
+							className="md:hidden flex flex-col justify-center items-center w-9 h-9 rounded-md"
+							onClick={() => setOpen((v) => !v)}
+							aria-label="Toggle menu"
+							style={{ background: "none", border: `1px solid ${C.border}`, cursor: "pointer", padding: 0 }}>
+							<motion.span animate={open ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }} className="block w-4 h-px" style={{ backgroundColor: C.text }} />
+							<motion.span animate={open ? { opacity: 0 } : { opacity: 1 }} className="block w-4 h-px mt-1" style={{ backgroundColor: C.text }} />
+							<motion.span animate={open ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }} className="block w-4 h-px mt-1" style={{ backgroundColor: C.text }} />
+						</button>
+					</div>
+				</div>
+			</header>
+
+			{/* Mobile Sheet */}
+			<AnimatePresence>
+				{open && (
+					<>
+						{/* Backdrop */}
+						<motion.div
+							className="fixed inset-0 z-55 md:hidden"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2 }}
+							onClick={() => setOpen(false)}
+							style={{ backgroundColor: "oklch(0 0 0 / 65%)" }}
+						/>
+
+						{/* Sheet panel */}
+						<motion.div
+							className="fixed top-0 right-0 h-full w-72 z-60 md:hidden flex flex-col"
+							initial={{ x: "100%" }}
+							animate={{ x: 0 }}
+							exit={{ x: "100%" }}
+							transition={{ type: "spring", damping: 28, stiffness: 220 }}
+							style={{ backgroundColor: C.surface, borderLeft: `1px solid ${C.border}` }}>
+
+							{/* Sheet header */}
+							<div className="flex items-center justify-between px-5 h-14 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+								<div className="flex items-center gap-2">
+									<LogoMark size={24} />
+									<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
+										Traytic
+									</span>
+								</div>
+								<button
+									onClick={() => setOpen(false)}
+									className="w-8 h-8 flex items-center justify-center rounded-md transition-colors"
+									aria-label="Close menu"
+									style={{ color: C.textMuted, background: "none", border: "none", cursor: "pointer" }}>
+									<CloseIcon />
+								</button>
+							</div>
+
+							{/* Nav links */}
+							<nav className="flex flex-col px-3 py-3 gap-0.5 flex-1">
+								{NAV_LINKS.map((item: { label: string; href: string }) => (
+									<a
+										key={item.href}
+										href={item.href}
+										onClick={() => setOpen(false)}
+										className="px-3 py-3 text-[14px] rounded-lg"
+										style={{ color: C.text, fontFamily: C.sans, textDecoration: "none" }}>
+										{item.label}
+									</a>
+								))}
+								<div className="my-2" style={{ height: 1, backgroundColor: C.border }} />
+								<a
+									href="https://github.com/grtsnx/traytic"
+									target="_blank"
+									rel="noopener noreferrer"
+									onClick={() => setOpen(false)}
+									className="flex items-center gap-2.5 px-3 py-3 text-[14px] rounded-lg"
+									style={{ color: C.text, fontFamily: C.sans, textDecoration: "none" }}>
+									<GitHubIcon /> GitHub
+								</a>
+								<SponsorButton variant="sheet" />
+							</nav>
+
+							{/* Sheet CTA */}
+							<div className="px-3 pb-6 shrink-0">
+								<a
+									href="#pricing"
+									onClick={() => setOpen(false)}
+									className="flex items-center justify-center w-full py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
+									style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
+									Get started free →
+								</a>
+							</div>
+						</motion.div>
+					</>
+				)}
+			</AnimatePresence>
+		</>
 	);
 }
 
@@ -244,22 +419,22 @@ function Hero() {
 					initial={{ opacity: 0, y: 12 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-					className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 rounded-full text-[11px] font-medium tracking-widest uppercase"
+					className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 rounded-full text-[11px] font-medium tracking-wide"
 					style={{
 						border: `1px solid ${C.accentBorder}`,
 						backgroundColor: C.accentBg,
 						color: C.accentText,
 						fontFamily: C.mono,
 					}}>
-					<span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.green, boxShadow: `0 0 6px ${C.green}` }} />
-					Open source · MIT license · v0.1.0
+					<YCIcon size={18} />
+					Not backed by YC. Open source.
 				</motion.div>
 
 				<motion.h1
 					initial={{ opacity: 0, y: 16 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5, delay: 0.08, ease: [0.25, 0.1, 0.25, 1] }}
-					className="text-[48px] sm:text-[60px] font-bold leading-[1.08] tracking-tight mb-5"
+					className="text-[34px] sm:text-[48px] md:text-[60px] font-bold leading-[1.08] tracking-tight mb-5"
 					style={{ color: C.text, fontFamily: C.display }}>
 					Analytics that respect
 					<br />
@@ -288,7 +463,7 @@ function Hero() {
 						Get started free →
 					</a>
 					<a
-						href="https://github.com/traytic/traytic"
+						href="https://github.com/grtsnx/traytic"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="flex items-center gap-2 px-6 py-3 text-[14px] font-medium rounded-lg transition-opacity hover:opacity-80"
@@ -307,8 +482,8 @@ function Hero() {
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ duration: 0.6, delay: 0.4 }}
-					className="mt-10 flex flex-wrap items-center justify-center gap-6 text-[12px]"
-					style={{ color: C.textMuted, fontFamily: C.mono }}>
+					className="mt-10 flex items-center justify-center gap-3 sm:gap-6 text-[10px] sm:text-[12px] overflow-x-auto"
+					style={{ color: C.textMuted, fontFamily: C.mono, scrollbarWidth: "none" }}>
 					{PROOF_ITEMS.map((item: string) => (
 						<span key={item} className="flex items-center gap-1.5">
 							<SmallCheckIcon />
@@ -452,7 +627,7 @@ function Pricing() {
 						Simple, honest pricing.
 					</h2>
 					<p className="text-[14px]" style={{ color: C.textMuted, fontFamily: C.sans }}>
-						14-day free trial on all paid plans. No credit card required.
+						Start free with 1 site. Add more when you&apos;re ready — from $5/mo.
 					</p>
 				</FadeIn>
 
@@ -477,13 +652,30 @@ function Pricing() {
 									<h3 className="text-[13px] font-semibold tracking-wide uppercase mb-3" style={{ color: C.textMuted, fontFamily: C.mono }}>
 										{plan.name}
 									</h3>
-									<div className="flex items-baseline gap-1.5 mb-3">
+									<div className="flex items-baseline gap-1.5 mb-1">
 										<span className="text-[40px] font-bold leading-none" style={{ color: C.text, fontFamily: C.display }}>
-											${plan.price}
+											{plan.price === "0" ? "Free" : `$${plan.price}`}
 										</span>
-										<span className="text-[13px]" style={{ color: C.textMuted, fontFamily: C.sans }}>
-											{plan.period}
-										</span>
+										{plan.price !== "0" && (
+											<span className="text-[13px]" style={{ color: C.textMuted, fontFamily: C.sans }}>
+												{plan.period}
+											</span>
+										)}
+									</div>
+									{plan.price !== "0" && (
+										<p className="text-[11px] mb-3" style={{ color: C.textMuted, fontFamily: C.mono }}>
+											₦{plan.priceNGN} / month for NG · GH · KE · ZA
+										</p>
+									)}
+									{plan.price === "0" && (
+										<p className="text-[11px] mb-3" style={{ color: C.textMuted, fontFamily: C.mono }}>
+											forever
+										</p>
+									)}
+									<div
+										className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold mb-3"
+										style={{ backgroundColor: C.accentBg, color: C.accentText, border: `1px solid ${C.accentBorder}`, fontFamily: C.mono }}>
+										{plan.siteLimit}
 									</div>
 									<p className="text-[13px] leading-relaxed" style={{ color: C.textMuted, fontFamily: C.sans }}>
 										{plan.desc}
@@ -519,7 +711,7 @@ function Pricing() {
 
 				<FadeIn delay={0.3}>
 					<p className="mt-6 text-center text-[12px]" style={{ color: C.textMuted, fontFamily: C.mono }}>
-						African markets (NG/GH/KE/ZA): plans available in NGN, GHS, KES, ZAR via Paystack.
+						NGN/GHS/KES/ZAR pricing via Paystack for NG · GH · KE · ZA markets.
 					</p>
 				</FadeIn>
 			</div>
@@ -535,7 +727,7 @@ function CTABanner() {
 			style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.surface }}>
 			<div className="max-w-2xl mx-auto">
 				<FadeIn>
-					<h2 className="text-[36px] font-bold tracking-tight mb-4" style={{ color: C.text, fontFamily: C.display }}>
+					<h2 className="text-[26px] sm:text-[36px] font-bold tracking-tight mb-4" style={{ color: C.text, fontFamily: C.display }}>
 						Ready to drop the consent banner?
 					</h2>
 					<p className="text-[15px] mb-8" style={{ color: C.textMuted, fontFamily: C.sans }}>
@@ -549,7 +741,7 @@ function CTABanner() {
 							Get started free →
 						</a>
 						<a
-							href="https://github.com/traytic/traytic"
+							href="https://github.com/grtsnx/traytic"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="flex items-center gap-2 px-6 py-3 text-[14px] font-medium rounded-lg transition-opacity hover:opacity-80"
@@ -575,17 +767,13 @@ function Footer() {
 		<footer className="py-8 px-6" style={{ borderTop: `1px solid ${C.border}` }}>
 			<div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
 				<div className="flex items-center gap-2">
-					<div
-						className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold"
-						style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.mono }}>
-						T
-					</div>
+					<LogoMark size={20} />
 					<span className="text-[13px] font-medium" style={{ color: C.textMuted, fontFamily: C.display }}>
 						Traytic · Open source analytics
 					</span>
 				</div>
 
-				<div className="flex items-center gap-4">
+				<div className="flex flex-wrap justify-center items-center gap-4">
 					{FOOTER_LINKS.map((link) => (
 						<a
 							key={link}
@@ -600,6 +788,7 @@ function Footer() {
 				<p className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.mono }}>
 					MIT license · © 2026 Traytic
 				</p>
+				<SponsorButton variant="footer" />
 			</div>
 		</footer>
 	);

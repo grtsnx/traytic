@@ -6,41 +6,46 @@ import {
   Delete,
   Param,
   Body,
-  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { SitesService } from './sites.service';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { CurrentUser, AuthUser } from '../../common/decorators/session.decorator';
 
 @Controller('sites')
+@UseGuards(AuthGuard)
 export class SitesController {
   constructor(private readonly sites: SitesService) {}
 
   @Get()
-  findAll(@Query('orgId') orgId: string) {
-    return this.sites.findByOrg(orgId);
+  findAll(@CurrentUser() user: AuthUser) {
+    return this.sites.findByUserId(user.id);
   }
 
   @Post()
   create(
-    @Body() body: { orgId: string; name: string; domain: string; timezone?: string },
+    @CurrentUser() user: AuthUser,
+    @Body() body: { name: string; domain: string; timezone?: string },
   ) {
-    return this.sites.create(body.orgId, body);
+    return this.sites.createForUser(user.id, body);
   }
 
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() body: { orgId: string; name?: string; domain?: string; public?: boolean },
+    @CurrentUser() user: AuthUser,
+    @Body() body: { name?: string; domain?: string; public?: boolean },
   ) {
-    return this.sites.update(id, body.orgId, body);
+    return this.sites.updateForUser(id, user.id, body);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @Query('orgId') orgId: string) {
-    return this.sites.delete(id, orgId);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sites.deleteForUser(id, user.id);
   }
 
   @Post(':id/rotate-key')
-  rotateKey(@Param('id') id: string, @Body('orgId') orgId: string) {
-    return this.sites.rotateApiKey(id, orgId);
+  rotateKey(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sites.rotateApiKeyForUser(id, user.id);
   }
 }

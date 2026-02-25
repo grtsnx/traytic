@@ -11,7 +11,8 @@
       "Bash(~/.bun/bin/bunx --bun prisma --version)",
       "Bash(ls /Users/grtsnx/programming/nextjs/traytic/node_modules/.bun/prisma@7.4.1*/node_modules/prisma/build/)",
       "Bash(find /Users/grtsnx/programming/nextjs/traytic/node_modules/.bun/prisma@7.4.1* -name \"package.json\" -maxdepth 3)",
-      "Bash(xargs -I{} grep -o \"PrismaConfig\\\\|defineConfig\" {})"
+      "Bash(xargs -I{} grep -o \"PrismaConfig\\\\|defineConfig\" {})",
+      "Bash(python3:*)"
     ]
   }
 }

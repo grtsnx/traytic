@@ -334,10 +334,10 @@ Traytic automatically routes users to the right payment processor:
 
 ## Contributing
 
-Issues and PRs welcome.
+Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and workflow. By participating, you agree to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
 ## License
 
-MIT
+[GNU AGPL-3.0](LICENSE)

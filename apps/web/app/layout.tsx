@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 	title: "Traytic — Open Source Analytics",
 	description:
 		"Privacy-first, real-time analytics for developers. Self-hostable alternative to Vercel Analytics.",
+	icons: { icon: "/icon", apple: "/apple-icon" },
 };
 
 export default function RootLayout({

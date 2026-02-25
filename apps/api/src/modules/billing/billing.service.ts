@@ -10,15 +10,15 @@ export const PLANS = {
     name: 'Pro',
     paystack: { planCode: process.env.PAYSTACK_PRO_PLAN_CODE ?? '' },
     polar: { productId: process.env.POLAR_PRO_PRODUCT_ID ?? '' },
-    priceNGN: 14900,   // ₦14,900/mo
-    priceUSD: 9,       // $9/mo
+    priceNGN: 7900,    // ₦7,900/mo
+    priceUSD: 5,       // $5/mo
   },
   team: {
     name: 'Team',
     paystack: { planCode: process.env.PAYSTACK_TEAM_PLAN_CODE ?? '' },
     polar: { productId: process.env.POLAR_TEAM_PRODUCT_ID ?? '' },
-    priceNGN: 44900,   // ₦44,900/mo
-    priceUSD: 29,      // $29/mo
+    priceNGN: 29900,   // ₦29,900/mo
+    priceUSD: 19,      // $19/mo
   },
 } as const;
 
@@ -30,6 +30,15 @@ export class BillingService {
   private readonly logger = new Logger(BillingService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Get the first org the user belongs to (or null if they have none yet) */
+  async getOrgIdForUser(userId: string): Promise<string | null> {
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { userId },
+      select: { orgId: true },
+    });
+    return membership?.orgId ?? null;
+  }
 
   getProvider(countryCode: string): 'paystack' | 'polar' {
     return PAYSTACK_COUNTRIES.has(countryCode.toUpperCase())
