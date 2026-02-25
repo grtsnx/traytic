@@ -1110,7 +1110,6 @@ export default function Dashboard() {
 					<div
 						style={{
 							display: "grid",
-							gridTemplateColumns: "repeat(4, 1fr)",
 							gap: "14px",
 							marginBottom: "20px",
 						}}
