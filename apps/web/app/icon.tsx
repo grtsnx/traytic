@@ -8,55 +8,24 @@ export default function Icon() {
 		(
 			<div
 				style={{
-					background: "#0d0d14",
+					background: "#7c3aed",
 					width: "100%",
 					height: "100%",
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "center",
-					borderRadius: "7px",
+					borderRadius: "9px",
 				}}>
-				{/* Bar chart — ascending left to right */}
-				<div
-					style={{
-						display: "flex",
-						alignItems: "flex-end",
-						gap: "3px",
-						height: "20px",
-					}}>
-					<div
-						style={{
-							width: "5px",
-							height: "8px",
-							background: "#5b6ef5",
-							borderRadius: "1.5px 1.5px 0 0",
-						}}
+				<svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+					<path
+						d="M2.5 15.5 L5.5 15.5 L7.5 12 L10 17 L13 9 L15 13 L17.5 8.5"
+						stroke="white"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
 					/>
-					<div
-						style={{
-							width: "5px",
-							height: "13px",
-							background: "#5b6ef5",
-							borderRadius: "1.5px 1.5px 0 0",
-						}}
-					/>
-					<div
-						style={{
-							width: "5px",
-							height: "10px",
-							background: "#5b6ef5",
-							borderRadius: "1.5px 1.5px 0 0",
-						}}
-					/>
-					<div
-						style={{
-							width: "5px",
-							height: "20px",
-							background: "#5b6ef5",
-							borderRadius: "1.5px 1.5px 0 0",
-						}}
-					/>
-				</div>
+					<circle cx="17.5" cy="8.5" r="1.8" fill="#4ade80" />
+				</svg>
 			</div>
 		),
 		{ ...size },

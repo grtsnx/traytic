@@ -1,10 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <!-- Rounded square background -->
-  <rect width="512" height="512" rx="128" fill="white"/>
-  <!-- Three ascending bars — shared baseline -->
-  <rect x="85" y="309" width="85" height="107" rx="21" fill="black" fill-opacity="0.3"/>
-  <rect x="213" y="235" width="85" height="181" rx="21" fill="black" fill-opacity="0.6"/>
-  <rect x="341" y="160" width="85" height="256" rx="21" fill="black"/>
-  <!-- Green trend dot -->
-  <circle cx="384" cy="139" r="26" fill="#4ade80"/>
+  <rect width="512" height="512" rx="150" fill="#7c3aed"/>
+  <path
+    d="M96 320 L170 320 L213 256 L267 362 L320 192 L362 277 L416 181"
+    stroke="white"
+    stroke-width="38"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="416" cy="181" r="32" fill="#4ade80"/>
 </svg>

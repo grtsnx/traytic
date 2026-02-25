@@ -8,7 +8,7 @@ export default function AppleIcon() {
 		(
 			<div
 				style={{
-					background: "#0d0d14",
+					background: "#7c3aed",
 					width: "100%",
 					height: "100%",
 					display: "flex",
@@ -16,47 +16,16 @@ export default function AppleIcon() {
 					justifyContent: "center",
 					borderRadius: "40px",
 				}}>
-				{/* Bar chart — ascending left to right */}
-				<div
-					style={{
-						display: "flex",
-						alignItems: "flex-end",
-						gap: "14px",
-						height: "110px",
-					}}>
-					<div
-						style={{
-							width: "26px",
-							height: "44px",
-							background: "#5b6ef5",
-							borderRadius: "6px 6px 0 0",
-						}}
+				<svg width="140" height="140" viewBox="0 0 24 24" fill="none">
+					<path
+						d="M2.5 15.5 L5.5 15.5 L7.5 12 L10 17 L13 9 L15 13 L17.5 8.5"
+						stroke="white"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
 					/>
-					<div
-						style={{
-							width: "26px",
-							height: "72px",
-							background: "#5b6ef5",
-							borderRadius: "6px 6px 0 0",
-						}}
-					/>
-					<div
-						style={{
-							width: "26px",
-							height: "56px",
-							background: "#5b6ef5",
-							borderRadius: "6px 6px 0 0",
-						}}
-					/>
-					<div
-						style={{
-							width: "26px",
-							height: "110px",
-							background: "#5b6ef5",
-							borderRadius: "6px 6px 0 0",
-						}}
-					/>
-				</div>
+					<circle cx="17.5" cy="8.5" r="1.8" fill="#4ade80" />
+				</svg>
 			</div>
 		),
 		{ ...size },

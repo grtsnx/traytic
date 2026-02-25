@@ -147,13 +147,17 @@ function FadeIn({
 function LogoMark({ size = 24 }: { size?: number }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<rect width="24" height="24" rx="6" fill={C.accent} />
-			{/* Three ascending bars — shared baseline at y=19.5 */}
-			<rect x="4" y="14.5" width="4" height="5" rx="1" fill="white" fillOpacity="0.55" />
-			<rect x="10" y="11" width="4" height="8.5" rx="1" fill="white" fillOpacity="0.8" />
-			<rect x="16" y="7.5" width="4" height="12" rx="1" fill="white" />
-			{/* Trend dot on tallest bar */}
-			<circle cx="18" cy="6.5" r="1.2" fill={C.green} />
+			<rect width="24" height="24" rx="7" fill={C.accent} />
+			{/* Rising pulse line */}
+			<path
+				d="M4.5 15.5 L8 15.5 L10 12 L12.5 17 L15 9 L17 13 L19.5 8.5"
+				stroke="white"
+				strokeWidth="1.8"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			{/* Live dot at the tip */}
+			<circle cx="19.5" cy="8.5" r="1.5" fill={C.green} />
 		</svg>
 	);
 }
