@@ -121,7 +121,7 @@ export default function Upgrade() {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({ provider, callbackURL: `${typeof window !== "undefined" ? window.location.origin : ""}/billing/success` }),
+				body: JSON.stringify({ provider, callbackURL: `${window.location.origin}/billing/success` }),
 			});
 			if (!res.ok) {
 				const d = await res.json() as { message?: string };
