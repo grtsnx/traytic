@@ -9,6 +9,7 @@ import { SitesModule } from './modules/sites/sites.module';
 import { StreamModule } from './modules/stream/stream.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { OrgsModule } from './modules/orgs/orgs.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuthModule } from './modules/auth/auth.module';
     StreamModule,
     BillingModule,
     AuthModule,
+    OrgsModule,
   ],
 })
 export class AppModule {}

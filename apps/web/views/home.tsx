@@ -104,7 +104,10 @@ export default function RootLayout({ children }) {
   return (
     <html><body>
       {children}
-      <Analytics siteId="YOUR_SITE_ID" />
+      <Analytics
+        siteId="YOUR_SITE_ID"
+        endpoint="https://your-api.example.com/collect"
+      />
     </body></html>
   )
 }`,

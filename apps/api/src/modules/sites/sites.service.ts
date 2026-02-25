@@ -3,9 +3,21 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../databases/prisma/prisma.service';
 import { OrganizationRole, PlanTier } from '../../generated/prisma/client';
 import { PLAN_LIMITS } from '@traytic/types';
+
+const ALPHA_NUM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+function generateId(prefix: string, length = 12): string {
+  const bytes = randomBytes(length);
+  let id = prefix;
+  for (let i = 0; i < length; i++) {
+    id += ALPHA_NUM[bytes[i] % ALPHA_NUM.length];
+  }
+  return id;
+}
 
 @Injectable()
 export class SitesService {
@@ -67,7 +79,14 @@ export class SitesService {
       );
     }
 
-    return this.prisma.site.create({ data: { ...data, orgId } });
+    return this.prisma.site.create({
+      data: {
+        id: generateId('site_'),
+        apiKey: generateId('key_', 24),
+        ...data,
+        orgId,
+      },
+    });
   }
 
   async updateForUser(
@@ -86,7 +105,7 @@ export class SitesService {
 
   async rotateApiKeyForUser(id: string, userId: string) {
     await this.assertUserOwnsSite(id, userId);
-    const apiKey = crypto.randomUUID().replace(/-/g, '');
+    const apiKey = generateId('key_', 24);
     return this.prisma.site.update({ where: { id }, data: { apiKey } });
   }
 

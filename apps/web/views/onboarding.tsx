@@ -32,7 +32,9 @@ const C = {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-type Step = "auth" | "add-site" | "verify" | "done";
+type Step = "auth" | "create-org" | "invite-team" | "add-site" | "verify";
+
+type OrgData = { id: string; name: string; slug: string };
 
 type SiteData = {
 	id: string;
@@ -95,6 +97,7 @@ function StepIndicator({ current, steps }: { current: number; steps: string[] })
 							)}
 						</div>
 						<span
+							className="hidden sm:inline"
 							style={{
 								fontFamily: C.sans,
 								fontSize: "12px",
@@ -112,7 +115,7 @@ function StepIndicator({ current, steps }: { current: number; steps: string[] })
 								height: "1px",
 								margin: "0 12px",
 								backgroundColor: i < current ? C.green : C.border,
-								minWidth: "20px",
+								minWidth: "12px",
 								transition: "background-color 0.3s",
 							}}
 						/>
@@ -122,8 +125,6 @@ function StepIndicator({ current, steps }: { current: number; steps: string[] })
 		</div>
 	);
 }
-
-// ── Form field ─────────────────────────────────────────────────────────────────
 
 function Field({
 	label,
@@ -194,8 +195,6 @@ function Field({
 	);
 }
 
-// ── Primary button ─────────────────────────────────────────────────────────────
-
 function PrimaryBtn({
 	children,
 	disabled,
@@ -238,15 +237,12 @@ function PrimaryBtn({
 	);
 }
 
-// ── Code block ─────────────────────────────────────────────────────────────────
-
-function CodeBlock({ code, onCopy }: { code: string; onCopy?: () => void }) {
+function CodeBlock({ code }: { code: string }) {
 	const [copied, setCopied] = useState(false);
 
 	function handleCopy() {
 		navigator.clipboard.writeText(code);
 		setCopied(true);
-		onCopy?.();
 		setTimeout(() => setCopied(false), 2000);
 	}
 
@@ -322,7 +318,7 @@ function AuthStep({ onComplete }: { onComplete: () => void }) {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({ provider, callbackURL: `${window.location.origin}/onboarding?step=add-site` }),
+				body: JSON.stringify({ provider, callbackURL: `${window.location.origin}/onboarding?step=create-org` }),
 			});
 			if (res.status === 404) {
 				const label = provider === "github" ? "GitHub" : "Google";
@@ -576,6 +572,215 @@ function AuthStep({ onComplete }: { onComplete: () => void }) {
 	);
 }
 
+// ── Create org step ────────────────────────────────────────────────────────────
+
+function CreateOrgStep({ onComplete }: { onComplete: (org: OrgData) => void }) {
+	const [orgName, setOrgName] = useState("");
+	const [loading, setLoading] = useState(false);
+
+	async function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		if (!orgName.trim()) return;
+		setLoading(true);
+		try {
+			const res = await fetch(`${API}/api/orgs`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ name: orgName.trim() }),
+			});
+			if (!res.ok) {
+				const d = (await res.json()) as { message?: string };
+				throw new Error(d.message ?? "Failed to create organization");
+			}
+			const org = (await res.json()) as OrgData;
+			onComplete(org);
+		} catch (err: unknown) {
+			toast.error(err instanceof Error ? err.message : "Something went wrong");
+		} finally {
+			setLoading(false);
+		}
+	}
+
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 16 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0, y: -12 }}
+			transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}>
+			<h1 style={{ fontFamily: C.display, fontSize: "26px", fontWeight: "800", color: C.text, letterSpacing: "-0.03em", marginBottom: "6px" }}>
+				Create your organization
+			</h1>
+			<p style={{ fontFamily: C.sans, fontSize: "14px", color: C.textMuted, marginBottom: "28px" }}>
+				This is where your team&apos;s sites and analytics live. You can rename it later.
+			</p>
+
+			<form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+				<Field
+					label="Organization name"
+					value={orgName}
+					onChange={setOrgName}
+					placeholder="e.g. My Company, Personal, Acme Corp"
+					required
+				/>
+				<PrimaryBtn type="submit" disabled={loading || !orgName.trim()}>
+					{loading && <Spinner />}
+					{loading ? "Creating…" : "Continue →"}
+				</PrimaryBtn>
+			</form>
+		</motion.div>
+	);
+}
+
+// ── Invite team step ───────────────────────────────────────────────────────────
+
+function InviteTeamStep({ org, onComplete }: { org: OrgData; onComplete: () => void }) {
+	const [emails, setEmails] = useState<string[]>([""]);
+	const [loading, setLoading] = useState(false);
+	const [sent, setSent] = useState(0);
+
+	function addRow() {
+		setEmails((prev) => [...prev, ""]);
+	}
+
+	function updateEmail(i: number, value: string) {
+		setEmails((prev) => prev.map((e, idx) => (idx === i ? value : e)));
+	}
+
+	function removeRow(i: number) {
+		setEmails((prev) => prev.filter((_, idx) => idx !== i));
+	}
+
+	async function handleInvite() {
+		const validEmails = emails.filter((e) => e.trim() && e.includes("@"));
+		if (validEmails.length === 0) {
+			onComplete();
+			return;
+		}
+		setLoading(true);
+		let successCount = 0;
+		for (const email of validEmails) {
+			try {
+				const res = await fetch(`${API}/api/orgs/${org.id}/invitations`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					credentials: "include",
+					body: JSON.stringify({ email: email.trim() }),
+				});
+				if (res.ok) successCount++;
+			} catch {
+				// continue with remaining
+			}
+		}
+		setSent(successCount);
+		setLoading(false);
+		if (successCount > 0) {
+			toast.success(`${successCount} invitation${successCount > 1 ? "s" : ""} sent`);
+		}
+		setTimeout(onComplete, 800);
+	}
+
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 16 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0, y: -12 }}
+			transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}>
+			<h1 style={{ fontFamily: C.display, fontSize: "26px", fontWeight: "800", color: C.text, letterSpacing: "-0.03em", marginBottom: "6px" }}>
+				Invite your team
+			</h1>
+			<p style={{ fontFamily: C.sans, fontSize: "14px", color: C.textMuted, marginBottom: "28px" }}>
+				Invite teammates to <strong style={{ color: C.text, fontWeight: "500" }}>{org.name}</strong>. They&apos;ll get an email with a link to join. You can always do this later.
+			</p>
+
+			<div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
+				{emails.map((email, i) => (
+					<div key={i} style={{ display: "flex", gap: "8px" }}>
+						<div style={{ flex: 1 }}>
+							<input
+								type="email"
+								value={email}
+								onChange={(e) => updateEmail(i, e.target.value)}
+								placeholder="teammate@company.com"
+								style={{
+									width: "100%",
+									padding: "10px 14px",
+									borderRadius: "10px",
+									fontSize: "14px",
+									outline: "none",
+									fontFamily: C.sans,
+									backgroundColor: C.bgDeep,
+									border: `1.5px solid ${C.border}`,
+									color: C.text,
+									boxSizing: "border-box",
+								}}
+							/>
+						</div>
+						{emails.length > 1 && (
+							<button
+								type="button"
+								onClick={() => removeRow(i)}
+								style={{
+									width: "38px",
+									height: "38px",
+									borderRadius: "10px",
+									border: `1px solid ${C.border}`,
+									backgroundColor: "transparent",
+									color: C.textMuted,
+									cursor: "pointer",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									flexShrink: 0,
+									marginTop: "1px",
+								}}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+									<line x1="18" y1="6" x2="6" y2="18" />
+									<line x1="6" y1="6" x2="18" y2="18" />
+								</svg>
+							</button>
+						)}
+					</div>
+				))}
+			</div>
+
+			<button
+				type="button"
+				onClick={addRow}
+				style={{
+					background: "none",
+					border: "none",
+					color: C.accentText,
+					cursor: "pointer",
+					fontFamily: C.sans,
+					fontSize: "13px",
+					fontWeight: "500",
+					padding: 0,
+					marginBottom: "24px",
+					display: "flex",
+					alignItems: "center",
+					gap: "6px",
+				}}>
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+					<line x1="12" y1="5" x2="12" y2="19" />
+					<line x1="5" y1="12" x2="19" y2="12" />
+				</svg>
+				Add another
+			</button>
+
+			<div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+				<PrimaryBtn onClick={handleInvite} disabled={loading}>
+					{loading && <Spinner />}
+					{loading ? `Sending ${sent > 0 ? `(${sent} sent)` : ""}…` : "Send invitations & continue →"}
+				</PrimaryBtn>
+				<PrimaryBtn variant="ghost" onClick={onComplete} disabled={loading}>
+					Skip for now →
+				</PrimaryBtn>
+			</div>
+		</motion.div>
+	);
+}
+
 // ── Add site step ──────────────────────────────────────────────────────────────
 
 function AddSiteStep({ onComplete }: { onComplete: (site: SiteData) => void }) {
@@ -607,7 +812,7 @@ function AddSiteStep({ onComplete }: { onComplete: (site: SiteData) => void }) {
 		}
 		setLoading(true);
 		try {
-			const res = await fetch(`${API}/sites`, {
+			const res = await fetch(`${API}/api/sites`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
@@ -680,7 +885,7 @@ function VerifyStep({ site, onComplete }: { site: SiteData; onComplete: () => vo
 
 	const checkLive = useCallback(async () => {
 		try {
-			const res = await fetch(`${API}/events/${site.id}/live`, {
+			const res = await fetch(`${API}/api/events/${site.id}/live`, {
 				credentials: "include",
 			});
 			if (res.ok) {
@@ -712,7 +917,7 @@ export default function RootLayout({ children }) {
   return (
     <html><body>
       {children}
-      <Analytics siteId="${site.id}" />
+      <Analytics siteId="${site.id}" endpoint="${API}/collect" />
     </body></html>
   )
 }`;
@@ -738,7 +943,6 @@ export default function RootLayout({ children }) {
 				Add the snippet to <strong style={{ color: C.text, fontWeight: "500" }}>{site.domain}</strong>, then visit your site. We&apos;ll detect events automatically.
 			</p>
 
-			{/* Tab selector */}
 			<div style={{ display: "flex", gap: "2px", marginBottom: "14px", backgroundColor: C.bgDeep, borderRadius: "9px", padding: "3px", border: `1px solid ${C.border}` }}>
 				{(["next", "script"] as const).map((t) => (
 					<button
@@ -765,7 +969,6 @@ export default function RootLayout({ children }) {
 
 			<CodeBlock code={tab === "next" ? snippetNext : snippetScript} />
 
-			{/* Live detection status */}
 			<div
 				style={{
 					marginTop: "20px",
@@ -823,11 +1026,9 @@ export default function RootLayout({ children }) {
 						Go to dashboard →
 					</PrimaryBtn>
 				) : (
-					<>
-						<PrimaryBtn variant="ghost" onClick={onComplete}>
-							Skip for now — go to dashboard
-						</PrimaryBtn>
-					</>
+					<PrimaryBtn variant="ghost" onClick={onComplete}>
+						Skip for now — go to dashboard
+					</PrimaryBtn>
 				)}
 			</div>
 		</motion.div>
@@ -836,8 +1037,15 @@ export default function RootLayout({ children }) {
 
 // ── Main Onboarding component ──────────────────────────────────────────────────
 
+const STEP_LABELS = ["Account", "Organization", "Invite team", "Add site", "Verify"];
+
+function stepIndex(step: Step): number {
+	return { auth: 0, "create-org": 1, "invite-team": 2, "add-site": 3, verify: 4 }[step];
+}
+
 export default function Onboarding() {
 	const [step, setStep] = useState<Step>("auth");
+	const [org, setOrg] = useState<OrgData | null>(null);
 	const [site, setSite] = useState<SiteData | null>(null);
 
 	useEffect(() => {
@@ -848,18 +1056,26 @@ export default function Onboarding() {
 			.then((r) => (r.ok ? r.json() : null))
 			.then(async (d: { user?: { id: string } } | null) => {
 				if (d?.user) {
-					if (urlStep === "add-site") {
-						setStep("add-site");
+					const orgsRes = await fetch(`${API}/api/orgs`, { credentials: "include" });
+					const orgs = orgsRes.ok ? ((await orgsRes.json()) as OrgData[]) : [];
+
+					if (urlStep === "create-org" && orgs.length === 0) {
+						setStep("create-org");
 						return;
 					}
-					const sitesRes = await fetch(`${API}/sites`, { credentials: "include" });
-					if (sitesRes.ok) {
-						const sites = (await sitesRes.json()) as SiteData[];
-						if (sites.length > 0) {
-							window.location.href = "/dashboard";
-						} else {
-							setStep("add-site");
-						}
+
+					if (orgs.length === 0) {
+						setStep("create-org");
+						return;
+					}
+
+					setOrg(orgs[0]);
+
+					const sitesRes = await fetch(`${API}/api/sites`, { credentials: "include" });
+					const sites = sitesRes.ok ? ((await sitesRes.json()) as SiteData[]) : [];
+
+					if (sites.length > 0) {
+						window.location.href = "/dashboard";
 					} else {
 						setStep("add-site");
 					}
@@ -868,9 +1084,16 @@ export default function Onboarding() {
 			.catch(() => undefined);
 	}, []);
 
-	const stepIndex = step === "auth" ? 0 : step === "add-site" ? 1 : 2;
-
 	function handleAuthComplete() {
+		setStep("create-org");
+	}
+
+	function handleOrgCreated(newOrg: OrgData) {
+		setOrg(newOrg);
+		setStep("invite-team");
+	}
+
+	function handleInviteComplete() {
 		setStep("add-site");
 	}
 
@@ -893,6 +1116,7 @@ export default function Onboarding() {
 			// proceed even if request fails
 		}
 		setStep("auth");
+		setOrg(null);
 		setSite(null);
 		window.history.replaceState(null, "", "/onboarding");
 	}
@@ -908,7 +1132,6 @@ export default function Onboarding() {
 				overflow: "hidden",
 			}}>
 
-			{/* Background dot grid */}
 			<div
 				style={{
 					position: "absolute",
@@ -919,7 +1142,6 @@ export default function Onboarding() {
 				}}
 			/>
 
-			{/* Ambient glow */}
 			<div
 				style={{
 					position: "absolute",
@@ -933,7 +1155,6 @@ export default function Onboarding() {
 				}}
 			/>
 
-			{/* Header */}
 			<header
 				style={{
 					flexShrink: 0,
@@ -991,7 +1212,6 @@ export default function Onboarding() {
 				</div>
 			</header>
 
-			{/* Scrollable content */}
 			<div style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>
 				<div
 					style={{
@@ -1002,14 +1222,24 @@ export default function Onboarding() {
 					}}>
 
 					<StepIndicator
-						current={stepIndex}
-						steps={["Account", "Add site", "Verify"]}
+						current={stepIndex(step)}
+						steps={STEP_LABELS}
 					/>
 
 					<AnimatePresence mode="wait">
 						{step === "auth" && (
 							<motion.div key="auth-step" exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.2 }}>
 								<AuthStep onComplete={handleAuthComplete} />
+							</motion.div>
+						)}
+						{step === "create-org" && (
+							<motion.div key="org-step" exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.2 }}>
+								<CreateOrgStep onComplete={handleOrgCreated} />
+							</motion.div>
+						)}
+						{step === "invite-team" && org && (
+							<motion.div key="invite-step" exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.2 }}>
+								<InviteTeamStep org={org} onComplete={handleInviteComplete} />
 							</motion.div>
 						)}
 						{step === "add-site" && (

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -35,63 +36,27 @@ const C = {
 	display: "var(--font-display)",
 } as const;
 
-// ── Mock data ──────────────────────────────────────────────────────────────────
+// ── API types ──────────────────────────────────────────────────────────────────
 
-const VISITORS_30D = [
-	1240, 1180, 1580, 1320, 1890, 2100, 1760, 2340, 2180, 2670,
-	2450, 2890, 3100, 2780, 3240, 3010, 3560, 3290, 3780, 4100,
-	3850, 4320, 4010, 4580, 4290, 4870, 5100, 4760, 5380, 5640,
-];
+type SiteData = { id: string; name: string; domain: string; apiKey: string; orgId: string };
+type OverviewData = { visitors: string; pageviews: string; avg_duration_ms: string; bounce_rate: string };
+type TimeseriesRow = { date: string; visitors: string; pageviews: string };
+type PageRow = { path: string; pageviews: string; visitors: string };
+type SourceRow = { source: string; visitors: string };
+type DeviceRow = { device_type: string; visitors: string };
+type CountryRow = { country: string; visitors: string };
 
-const PAGEVIEWS_30D = VISITORS_30D.map((v, i) => Math.round(v * (3.0 + Math.sin(i * 0.7) * 0.4)));
-
-const PREV_VISITORS = VISITORS_30D.slice(0, 15).reduce((a, b) => a + b, 0);
-const CURR_VISITORS = VISITORS_30D.slice(15).reduce((a, b) => a + b, 0);
-
-const TOP_PAGES = [
-	{ path: "/", title: "Home", visitors: 8420, pageviews: 12840, bounce: 38 },
-	{ path: "/pricing", title: "Pricing", visitors: 3280, pageviews: 4120, bounce: 52 },
-	{ path: "/docs", title: "Documentation", visitors: 2940, pageviews: 6780, bounce: 24 },
-	{ path: "/blog/getting-started", title: "Getting Started", visitors: 1840, pageviews: 2190, bounce: 61 },
-	{ path: "/changelog", title: "Changelog", visitors: 1290, pageviews: 1780, bounce: 44 },
-	{ path: "/blog/privacy-analytics", title: "Privacy Analytics", visitors: 980, pageviews: 1240, bounce: 58 },
-	{ path: "/integrations", title: "Integrations", visitors: 740, pageviews: 980, bounce: 47 },
-];
-
-const TOP_SOURCES = [
-	{ source: "Direct", visitors: 9840, pct: 35.2, color: C.accentText },
-	{ source: "google.com", visitors: 7230, pct: 25.9, color: C.green },
-	{ source: "github.com", visitors: 3410, pct: 12.2, color: C.orange },
-	{ source: "twitter.com", visitors: 2180, pct: 7.8, color: "#1DA1F2" },
-	{ source: "news.ycombinator.com", visitors: 1920, pct: 6.9, color: "#FF6600" },
-	{ source: "dev.to", visitors: 1240, pct: 4.4, color: C.textMuted },
-	{ source: "reddit.com", visitors: 980, pct: 3.5, color: "#FF4500" },
-];
-
-const DEVICES = [
-	{ name: "Desktop", pct: 67, color: C.accent },
-	{ name: "Mobile", pct: 28, color: C.green },
-	{ name: "Tablet", pct: 5, color: C.orange },
-];
-
-const COUNTRIES = [
-	{ name: "United States", flag: "🇺🇸", visitors: 8420, pct: 30.1 },
-	{ name: "United Kingdom", flag: "🇬🇧", visitors: 3280, pct: 11.7 },
-	{ name: "Germany", flag: "🇩🇪", visitors: 2940, pct: 10.5 },
-	{ name: "India", flag: "🇮🇳", visitors: 2180, pct: 7.8 },
-	{ name: "Canada", flag: "🇨🇦", visitors: 1840, pct: 6.6 },
-	{ name: "Nigeria", flag: "🇳🇬", visitors: 1290, pct: 4.6 },
-	{ name: "France", flag: "🇫🇷", visitors: 980, pct: 3.5 },
-];
+const SOURCE_COLORS = [C.accentText, C.green, C.orange, "#1DA1F2", "#FF6600", C.textMuted, "#FF4500", C.accent, C.red];
 
 // ── Chart helpers ──────────────────────────────────────────────────────────────
 
 function makeSmoothPath(data: number[], w: number, h: number, padX = 0, padY = 12) {
+	if (data.length === 0) return { line: "", area: "", gridYValues: [] as string[], lastPt: { x: 0, y: h } };
 	const usableW = w - padX * 2;
 	const usableH = h - padY * 2;
-	const max = Math.max(...data) * 1.12;
+	const max = Math.max(...data) * 1.12 || 1;
 	const pts = data.map((v, i) => ({
-		x: padX + (i / (data.length - 1)) * usableW,
+		x: padX + (i / Math.max(data.length - 1, 1)) * usableW,
 		y: padY + usableH - (v / max) * usableH,
 	}));
 	const line = pts.reduce((acc: string, p, i) => {
@@ -108,6 +73,7 @@ function makeSmoothPath(data: number[], w: number, h: number, padX = 0, padY = 1
 }
 
 function makeSparkPath(data: number[], w: number, h: number): string {
+	if (data.length < 2) return "";
 	const max = Math.max(...data);
 	const min = Math.min(...data);
 	const range = max - min || 1;
@@ -129,6 +95,13 @@ function fmt(n: number): string {
 	return String(n);
 }
 
+function fmtDuration(ms: number): string {
+	const totalSec = Math.round(ms / 1000);
+	const m = Math.floor(totalSec / 60);
+	const s = totalSec % 60;
+	return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 // ── Utility components ─────────────────────────────────────────────────────────
 
 function LogoMark({ size = 24 }: { size?: number }) {
@@ -143,8 +116,18 @@ function LogoMark({ size = 24 }: { size?: number }) {
 	);
 }
 
+function Spinner({ size = 16 }: { size?: number }) {
+	return (
+		<svg className="animate-spin" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+			<circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+			<path d="M12 2a10 10 0 0 1 10 10" />
+		</svg>
+	);
+}
+
 function Sparkline({ data, color, up }: { data: number[]; color: string; up: boolean }) {
 	const path = makeSparkPath(data, 60, 24);
+	if (!path) return null;
 	return (
 		<svg width="60" height="24" viewBox="0 0 60 24" style={{ display: "block" }}>
 			<path
@@ -179,16 +162,42 @@ function TrendBadge({ value, good }: { value: string; good: boolean }) {
 	);
 }
 
+function EmptyState({ message }: { message: string }) {
+	return (
+		<div style={{
+			display: "flex",
+			flexDirection: "column",
+			alignItems: "center",
+			justifyContent: "center",
+			padding: "60px 20px",
+			textAlign: "center",
+		}}>
+			<div style={{
+				width: "56px",
+				height: "56px",
+				borderRadius: "50%",
+				backgroundColor: C.surface,
+				border: `1px solid ${C.border}`,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				marginBottom: "16px",
+			}}>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round">
+					<path d="M3 3v18h18" />
+					<path d="M7 16l4-4 4 4 5-6" />
+				</svg>
+			</div>
+			<p style={{ fontFamily: C.sans, fontSize: "14px", color: C.textMuted, maxWidth: "300px", lineHeight: 1.5 }}>
+				{message}
+			</p>
+		</div>
+	);
+}
+
 // ── Realtime counter ───────────────────────────────────────────────────────────
 
-function RealtimeCounter() {
-	const [count, setCount] = useState(47);
-	useEffect(() => {
-		const t = setInterval(() => {
-			setCount((c) => Math.max(1, c + Math.floor(Math.random() * 5) - 2));
-		}, 3200);
-		return () => clearInterval(t);
-	}, []);
+function RealtimeCounter({ count }: { count: number }) {
 	return (
 		<motion.span
 			key={count}
@@ -213,20 +222,17 @@ function RealtimeCounter() {
 function MetricCard({
 	label,
 	value,
-	change,
-	good,
 	sparkData,
 	unit,
 	delay,
 }: {
 	label: string;
 	value: string;
-	change: string;
-	good: boolean;
 	sparkData: number[];
 	unit?: string;
 	delay: number;
 }) {
+	const up = sparkData.length >= 2 ? sparkData[sparkData.length - 1] >= sparkData[0] : true;
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 16 }}
@@ -252,38 +258,27 @@ function MetricCard({
 					}}>
 					{label}
 				</span>
-				<Sparkline data={sparkData} color={good ? C.green : C.red} up={good} />
+				{sparkData.length >= 2 && (
+					<Sparkline data={sparkData} color={up ? C.green : C.red} up={up} />
+				)}
 			</div>
-			<div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "8px" }}>
-				<div>
-					<span
-						style={{
-							fontFamily: C.mono,
-							fontSize: "28px",
-							fontWeight: "700",
-							color: C.text,
-							letterSpacing: "-0.05em",
-							lineHeight: "1",
-						}}>
-						{value}
+			<div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
+				<span
+					style={{
+						fontFamily: C.mono,
+						fontSize: "28px",
+						fontWeight: "700",
+						color: C.text,
+						letterSpacing: "-0.05em",
+						lineHeight: "1",
+					}}>
+					{value}
+				</span>
+				{unit && (
+					<span style={{ fontFamily: C.mono, fontSize: "13px", color: C.textMuted, marginLeft: "4px" }}>
+						{unit}
 					</span>
-					{unit && (
-						<span style={{ fontFamily: C.mono, fontSize: "13px", color: C.textMuted, marginLeft: "4px" }}>
-							{unit}
-						</span>
-					)}
-				</div>
-				<TrendBadge value={change} good={good} />
-			</div>
-			<div
-				style={{
-					fontFamily: C.mono,
-					fontSize: "10px",
-					color: C.textFaint,
-					textTransform: "uppercase",
-					letterSpacing: "0.06em",
-				}}>
-				vs previous 15 days
+				)}
 			</div>
 		</motion.div>
 	);
@@ -291,20 +286,34 @@ function MetricCard({
 
 // ── Main chart ─────────────────────────────────────────────────────────────────
 
-function MainChart({ period }: { period: string }) {
+function MainChart({ timeseries }: { timeseries: TimeseriesRow[] }) {
+	const visitors = timeseries.map((r) => Number(r.visitors));
+	const pageviews = timeseries.map((r) => Number(r.pageviews));
+
+	if (visitors.length === 0) {
+		return (
+			<div style={{
+				backgroundColor: C.surface,
+				border: `1px solid ${C.border}`,
+				borderRadius: "16px",
+				padding: "22px 24px",
+			}}>
+				<EmptyState message="No data yet. Once your tracking snippet captures events, the chart will appear here." />
+			</div>
+		);
+	}
+
 	const w = 800;
 	const h = 200;
-	const { line: visLine, area: visArea, gridYValues, lastPt } = makeSmoothPath(VISITORS_30D, w, h);
-	const { line: pvLine } = makeSmoothPath(PAGEVIEWS_30D, w, h);
+	const { line: visLine, area: visArea, gridYValues, lastPt } = makeSmoothPath(visitors, w, h);
+	const { line: pvLine } = makeSmoothPath(pageviews, w, h);
 
-	const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
-	const labels: string[] = [];
-	const now = new Date();
-	for (let i = days - 1; i >= 0; i -= Math.ceil(days / 6)) {
-		const d = new Date(now);
-		d.setDate(d.getDate() - i);
-		labels.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }));
-	}
+	const labelCount = Math.min(timeseries.length, 6);
+	const step = Math.max(1, Math.floor(timeseries.length / labelCount));
+	const labels = timeseries.filter((_, i) => i % step === 0 || i === timeseries.length - 1).map((r) => {
+		const d = new Date(r.date);
+		return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+	});
 
 	return (
 		<motion.div
@@ -317,7 +326,6 @@ function MainChart({ period }: { period: string }) {
 				borderRadius: "16px",
 				padding: "22px 24px",
 			}}>
-			{/* Chart header */}
 			<div
 				style={{
 					display: "flex",
@@ -327,49 +335,16 @@ function MainChart({ period }: { period: string }) {
 				}}>
 				<div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
 					<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-						<span
-							style={{
-								width: "10px",
-								height: "3px",
-								borderRadius: "2px",
-								backgroundColor: C.accent,
-								display: "inline-block",
-							}}
-						/>
+						<span style={{ width: "10px", height: "3px", borderRadius: "2px", backgroundColor: C.accent, display: "inline-block" }} />
 						<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted }}>Visitors</span>
 					</div>
 					<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-						<span
-							style={{
-								width: "10px",
-								height: "3px",
-								borderRadius: "2px",
-								backgroundColor: C.accentDim,
-								display: "inline-block",
-								opacity: 0.5,
-							}}
-						/>
+						<span style={{ width: "10px", height: "3px", borderRadius: "2px", backgroundColor: C.accentDim, display: "inline-block", opacity: 0.5 }} />
 						<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted }}>Pageviews</span>
 					</div>
 				</div>
-				<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-					<span
-						style={{
-							width: "6px",
-							height: "6px",
-							borderRadius: "50%",
-							backgroundColor: C.green,
-							boxShadow: `0 0 8px ${C.green}`,
-							display: "inline-block",
-						}}
-					/>
-					<span style={{ fontFamily: C.mono, fontSize: "10px", color: C.green }}>
-						Last updated just now
-					</span>
-				</div>
 			</div>
 
-			{/* SVG Chart */}
 			<div style={{ position: "relative", width: "100%" }}>
 				<svg
 					viewBox={`0 0 ${w} ${h}`}
@@ -391,27 +366,19 @@ function MainChart({ period }: { period: string }) {
 						</clipPath>
 					</defs>
 
-					{/* Horizontal grid */}
 					{gridYValues.map((y) => (
-						<line
-							key={y}
-							x1="0"
-							y1={y}
-							x2={w}
-							y2={y}
-							stroke="oklch(1 0 0 / 5%)"
-							strokeWidth="1"
-						/>
+						<line key={y} x1="0" y1={y} x2={w} y2={y} stroke="oklch(1 0 0 / 5%)" strokeWidth="1" />
 					))}
 
-					{/* Pageviews area (behind) */}
-					<path d={pvLine + ` L${w},${h} L0,${h} Z`} fill="url(#pvGrad)" clipPath="url(#chartClip)" />
-					<path d={pvLine} fill="none" stroke={C.accentDim} strokeWidth="1" strokeOpacity="0.35" strokeLinecap="round" clipPath="url(#chartClip)" />
+					{pvLine && (
+						<>
+							<path d={pvLine + ` L${w},${h} L0,${h} Z`} fill="url(#pvGrad)" clipPath="url(#chartClip)" />
+							<path d={pvLine} fill="none" stroke={C.accentDim} strokeWidth="1" strokeOpacity="0.35" strokeLinecap="round" clipPath="url(#chartClip)" />
+						</>
+					)}
 
-					{/* Visitors area */}
 					<path d={visArea} fill="url(#visGrad)" clipPath="url(#chartClip)" />
 
-					{/* Visitors line — animates in */}
 					<motion.path
 						d={visLine}
 						fill="none"
@@ -424,7 +391,6 @@ function MainChart({ period }: { period: string }) {
 						clipPath="url(#chartClip)"
 					/>
 
-					{/* Live dot at end */}
 					<circle cx={lastPt.x} cy={lastPt.y} r="4" fill={C.accent} />
 					<circle cx={lastPt.x} cy={lastPt.y} r="8" fill={C.accent} fillOpacity="0.15">
 						<animate attributeName="r" values="5;12;5" dur="3s" repeatCount="indefinite" />
@@ -432,16 +398,9 @@ function MainChart({ period }: { period: string }) {
 					</circle>
 				</svg>
 
-				{/* X-axis labels */}
-				<div
-					style={{
-						display: "flex",
-						justifyContent: "space-between",
-						marginTop: "8px",
-						paddingLeft: "0",
-					}}>
-					{labels.map((l) => (
-						<span key={l} style={{ fontFamily: C.mono, fontSize: "10px", color: C.textFaint }}>
+				<div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+					{labels.map((l, i) => (
+						<span key={`${l}-${i}`} style={{ fontFamily: C.mono, fontSize: "10px", color: C.textFaint }}>
 							{l}
 						</span>
 					))}
@@ -453,8 +412,9 @@ function MainChart({ period }: { period: string }) {
 
 // ── Top pages table ────────────────────────────────────────────────────────────
 
-function TopPagesTable() {
-	const maxVisitors = TOP_PAGES[0].visitors;
+function TopPagesTable({ pages }: { pages: PageRow[] }) {
+	if (pages.length === 0) return null;
+	const maxVisitors = Math.max(...pages.map((p) => Number(p.visitors)));
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 16 }}
@@ -474,44 +434,28 @@ function TopPagesTable() {
 					alignItems: "center",
 					justifyContent: "space-between",
 				}}>
-				<span
-					style={{
-						fontFamily: C.mono,
-						fontSize: "11px",
-						color: C.textMuted,
-						textTransform: "uppercase",
-						letterSpacing: "0.08em",
-					}}>
+				<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
 					Top pages
 				</span>
 				<div style={{ display: "flex", gap: "16px" }}>
-					{["Visitors", "Bounce"].map((h) => (
-						<span
-							key={h}
-							style={{
-								fontFamily: C.mono,
-								fontSize: "10px",
-								color: C.textFaint,
-								textTransform: "uppercase",
-								letterSpacing: "0.06em",
-							}}>
+					{["Visitors", "Views"].map((h) => (
+						<span key={h} style={{ fontFamily: C.mono, fontSize: "10px", color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>
 							{h}
 						</span>
 					))}
 				</div>
 			</div>
 			<div>
-				{TOP_PAGES.map((page, i) => (
+				{pages.map((page, i) => (
 					<div
 						key={page.path}
 						style={{
 							display: "flex",
 							alignItems: "center",
 							padding: "11px 20px",
-							borderBottom: i < TOP_PAGES.length - 1 ? `1px solid ${C.border}` : "none",
+							borderBottom: i < pages.length - 1 ? `1px solid ${C.border}` : "none",
 							gap: "12px",
 						}}>
-						{/* Bar */}
 						<div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
 							<div
 								style={{
@@ -519,39 +463,19 @@ function TopPagesTable() {
 									inset: 0,
 									backgroundColor: C.accentBg,
 									borderRadius: "3px",
-									width: `${(page.visitors / maxVisitors) * 100}%`,
+									width: `${(Number(page.visitors) / maxVisitors) * 100}%`,
 									transition: "width 0.6s ease",
 								}}
 							/>
-							<div style={{ position: "relative", display: "flex", flexDirection: "column", gap: "1px", padding: "4px 0" }}>
-								<span style={{ fontFamily: C.sans, fontSize: "13px", color: C.text, fontWeight: "500" }}>
-									{page.title}
-								</span>
-								<span style={{ fontFamily: C.mono, fontSize: "10px", color: C.textMuted }}>{page.path}</span>
+							<div style={{ position: "relative", padding: "4px 0" }}>
+								<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.text }}>{page.path}</span>
 							</div>
 						</div>
-						{/* Visitors */}
-						<span
-							style={{
-								fontFamily: C.mono,
-								fontSize: "13px",
-								color: C.text,
-								fontWeight: "600",
-								minWidth: "52px",
-								textAlign: "right",
-							}}>
-							{fmt(page.visitors)}
+						<span style={{ fontFamily: C.mono, fontSize: "13px", color: C.text, fontWeight: "600", minWidth: "52px", textAlign: "right" }}>
+							{fmt(Number(page.visitors))}
 						</span>
-						{/* Bounce */}
-						<span
-							style={{
-								fontFamily: C.mono,
-								fontSize: "12px",
-								color: page.bounce > 50 ? C.redText : C.textMuted,
-								minWidth: "40px",
-								textAlign: "right",
-							}}>
-							{page.bounce}%
+						<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.textMuted, minWidth: "48px", textAlign: "right" }}>
+							{fmt(Number(page.pageviews))}
 						</span>
 					</div>
 				))}
@@ -562,7 +486,9 @@ function TopPagesTable() {
 
 // ── Top sources table ──────────────────────────────────────────────────────────
 
-function TopSourcesTable() {
+function TopSourcesTable({ sources }: { sources: SourceRow[] }) {
+	if (sources.length === 0) return null;
+	const total = sources.reduce((a, s) => a + Number(s.visitors), 0);
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 16 }}
@@ -582,82 +508,53 @@ function TopSourcesTable() {
 					alignItems: "center",
 					justifyContent: "space-between",
 				}}>
-				<span
-					style={{
-						fontFamily: C.mono,
-						fontSize: "11px",
-						color: C.textMuted,
-						textTransform: "uppercase",
-						letterSpacing: "0.08em",
-					}}>
+				<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
 					Top sources
 				</span>
-				<span
-					style={{
-						fontFamily: C.mono,
-						fontSize: "10px",
-						color: C.textFaint,
-						textTransform: "uppercase",
-						letterSpacing: "0.06em",
-					}}>
+				<span style={{ fontFamily: C.mono, fontSize: "10px", color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>
 					Visitors
 				</span>
 			</div>
 			<div>
-				{TOP_SOURCES.map((src, i) => (
-					<div
-						key={src.source}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							padding: "12px 20px",
-							borderBottom: i < TOP_SOURCES.length - 1 ? `1px solid ${C.border}` : "none",
-							gap: "12px",
-						}}>
-						{/* Color dot */}
-						<span
+				{sources.map((src, i) => {
+					const pct = total > 0 ? ((Number(src.visitors) / total) * 100).toFixed(1) : "0";
+					const color = SOURCE_COLORS[i % SOURCE_COLORS.length];
+					return (
+						<div
+							key={src.source || "direct"}
 							style={{
-								width: "7px",
-								height: "7px",
-								borderRadius: "50%",
-								backgroundColor: src.color,
-								flexShrink: 0,
-							}}
-						/>
-						{/* Source name + bar */}
-						<div style={{ flex: 1, position: "relative" }}>
-							<div
-								style={{
-									position: "absolute",
-									top: 0,
-									left: 0,
-									bottom: 0,
-									width: `${src.pct}%`,
-									backgroundColor: `${src.color}14`,
-									borderRadius: "3px",
-								}}
-							/>
-							<span
-								style={{
-									position: "relative",
-									fontFamily: C.sans,
-									fontSize: "13px",
-									color: C.text,
-									fontWeight: "500",
-								}}>
-								{src.source}
+								display: "flex",
+								alignItems: "center",
+								padding: "12px 20px",
+								borderBottom: i < sources.length - 1 ? `1px solid ${C.border}` : "none",
+								gap: "12px",
+							}}>
+							<span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
+							<div style={{ flex: 1, position: "relative" }}>
+								<div
+									style={{
+										position: "absolute",
+										top: 0,
+										left: 0,
+										bottom: 0,
+										width: `${pct}%`,
+										backgroundColor: `${color}14`,
+										borderRadius: "3px",
+									}}
+								/>
+								<span style={{ position: "relative", fontFamily: C.sans, fontSize: "13px", color: C.text, fontWeight: "500" }}>
+									{src.source || "Direct / None"}
+								</span>
+							</div>
+							<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted, minWidth: "38px", textAlign: "right" }}>
+								{pct}%
+							</span>
+							<span style={{ fontFamily: C.mono, fontSize: "13px", color: C.text, fontWeight: "600", minWidth: "48px", textAlign: "right" }}>
+								{fmt(Number(src.visitors))}
 							</span>
 						</div>
-						{/* Pct */}
-						<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted, minWidth: "38px", textAlign: "right" }}>
-							{src.pct}%
-						</span>
-						{/* Count */}
-						<span style={{ fontFamily: C.mono, fontSize: "13px", color: C.text, fontWeight: "600", minWidth: "48px", textAlign: "right" }}>
-							{fmt(src.visitors)}
-						</span>
-					</div>
-				))}
+					);
+				})}
 			</div>
 		</motion.div>
 	);
@@ -665,7 +562,10 @@ function TopSourcesTable() {
 
 // ── Devices breakdown ──────────────────────────────────────────────────────────
 
-function DevicesBreakdown() {
+function DevicesBreakdown({ devices }: { devices: DeviceRow[] }) {
+	if (devices.length === 0) return null;
+	const total = devices.reduce((a, d) => a + Number(d.visitors), 0);
+	const deviceColors: Record<string, string> = { Desktop: C.accent, Mobile: C.green, Tablet: C.orange };
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 16 }}
@@ -690,40 +590,26 @@ function DevicesBreakdown() {
 				Devices
 			</span>
 			<div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-				{DEVICES.map((d) => (
-					<div key={d.name}>
-						<div
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
-								marginBottom: "6px",
-							}}>
-							<span style={{ fontFamily: C.sans, fontSize: "13px", color: C.text }}>{d.name}</span>
-							<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.textMuted, fontWeight: "600" }}>
-								{d.pct}%
-							</span>
+				{devices.map((d) => {
+					const pct = total > 0 ? Math.round((Number(d.visitors) / total) * 100) : 0;
+					const color = deviceColors[d.device_type] || C.textMuted;
+					return (
+						<div key={d.device_type}>
+							<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+								<span style={{ fontFamily: C.sans, fontSize: "13px", color: C.text }}>{d.device_type || "Unknown"}</span>
+								<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.textMuted, fontWeight: "600" }}>{pct}%</span>
+							</div>
+							<div style={{ height: "5px", backgroundColor: C.bg, borderRadius: "3px", overflow: "hidden" }}>
+								<motion.div
+									initial={{ width: 0 }}
+									animate={{ width: `${pct}%` }}
+									transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+									style={{ height: "100%", backgroundColor: color, borderRadius: "3px" }}
+								/>
+							</div>
 						</div>
-						<div
-							style={{
-								height: "5px",
-								backgroundColor: C.bg,
-								borderRadius: "3px",
-								overflow: "hidden",
-							}}>
-							<motion.div
-								initial={{ width: 0 }}
-								animate={{ width: `${d.pct}%` }}
-								transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-								style={{
-									height: "100%",
-									backgroundColor: d.color,
-									borderRadius: "3px",
-								}}
-							/>
-						</div>
-					</div>
-				))}
+					);
+				})}
 			</div>
 		</motion.div>
 	);
@@ -731,8 +617,10 @@ function DevicesBreakdown() {
 
 // ── Countries breakdown ────────────────────────────────────────────────────────
 
-function CountriesBreakdown() {
-	const max = COUNTRIES[0].pct;
+function CountriesBreakdown({ countries }: { countries: CountryRow[] }) {
+	if (countries.length === 0) return null;
+	const total = countries.reduce((a, c) => a + Number(c.visitors), 0);
+	const maxPct = total > 0 ? (Number(countries[0].visitors) / total) * 100 : 0;
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 16 }}
@@ -744,66 +632,279 @@ function CountriesBreakdown() {
 				borderRadius: "16px",
 				overflow: "hidden",
 			}}>
-			<div
-				style={{
-					padding: "18px 20px",
-					borderBottom: `1px solid ${C.border}`,
-				}}>
-				<span
-					style={{
-						fontFamily: C.mono,
-						fontSize: "11px",
-						color: C.textMuted,
-						textTransform: "uppercase",
-						letterSpacing: "0.08em",
-					}}>
+			<div style={{ padding: "18px 20px", borderBottom: `1px solid ${C.border}` }}>
+				<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
 					Countries
 				</span>
 			</div>
 			<div>
-				{COUNTRIES.map((c, i) => (
-					<div
-						key={c.name}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							padding: "10px 20px",
-							borderBottom: i < COUNTRIES.length - 1 ? `1px solid ${C.border}` : "none",
-							gap: "10px",
-						}}>
-						<span style={{ fontSize: "14px", flexShrink: 0 }}>{c.flag}</span>
-						<div style={{ flex: 1, position: "relative" }}>
-							<div
-								style={{
-									position: "absolute",
-									inset: 0,
-									backgroundColor: C.accentBg,
-									borderRadius: "3px",
-									width: `${(c.pct / max) * 100}%`,
-								}}
-							/>
-							<span
-								style={{
-									position: "relative",
-									fontFamily: C.sans,
-									fontSize: "12px",
-									color: C.text,
-									display: "block",
-									padding: "2px 0",
-								}}>
-								{c.name}
+				{countries.slice(0, 10).map((c, i) => {
+					const pct = total > 0 ? ((Number(c.visitors) / total) * 100).toFixed(1) : "0";
+					return (
+						<div
+							key={c.country}
+							style={{
+								display: "flex",
+								alignItems: "center",
+								padding: "10px 20px",
+								borderBottom: i < Math.min(countries.length, 10) - 1 ? `1px solid ${C.border}` : "none",
+								gap: "10px",
+							}}>
+							<div style={{ flex: 1, position: "relative" }}>
+								<div
+									style={{
+										position: "absolute",
+										inset: 0,
+										backgroundColor: C.accentBg,
+										borderRadius: "3px",
+										width: maxPct > 0 ? `${(Number(pct) / maxPct) * 100}%` : "0%",
+									}}
+								/>
+								<span style={{ position: "relative", fontFamily: C.sans, fontSize: "12px", color: C.text, display: "block", padding: "2px 0" }}>
+									{c.country}
+								</span>
+							</div>
+							<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.textMuted, minWidth: "34px", textAlign: "right" }}>
+								{pct}%
+							</span>
+							<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.text, fontWeight: "600", minWidth: "44px", textAlign: "right" }}>
+								{fmt(Number(c.visitors))}
 							</span>
 						</div>
-						<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.textMuted, minWidth: "34px", textAlign: "right" }}>
-							{c.pct}%
-						</span>
-						<span style={{ fontFamily: C.mono, fontSize: "12px", color: C.text, fontWeight: "600", minWidth: "44px", textAlign: "right" }}>
-							{fmt(c.visitors)}
-						</span>
-					</div>
-				))}
+					);
+				})}
 			</div>
 		</motion.div>
+	);
+}
+
+// ── Site selector ──────────────────────────────────────────────────────────────
+
+function SiteSelector({
+	sites,
+	activeSite,
+	onSelect,
+	onDelete,
+}: {
+	sites: SiteData[];
+	activeSite: SiteData | null;
+	onSelect: (site: SiteData) => void;
+	onDelete: (site: SiteData) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+	const ref = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		function handleClick(e: MouseEvent) {
+			if (ref.current && !ref.current.contains(e.target as Node)) {
+				setOpen(false);
+				setConfirmDelete(null);
+			}
+		}
+		document.addEventListener("mousedown", handleClick);
+		return () => document.removeEventListener("mousedown", handleClick);
+	}, []);
+
+	return (
+		<div ref={ref} style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}`, position: "relative" }}>
+			<button
+				type="button"
+				onClick={() => setOpen(!open)}
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: "8px",
+					width: "100%",
+					padding: "8px 10px",
+					borderRadius: "8px",
+					backgroundColor: C.surface,
+					border: `1px solid ${C.border}`,
+					cursor: "pointer",
+					textAlign: "left",
+				}}>
+				<div
+					style={{
+						width: "18px",
+						height: "18px",
+						borderRadius: "4px",
+						backgroundColor: C.accent,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flexShrink: 0,
+					}}>
+					<span style={{ fontSize: "8px", color: "#fff", fontWeight: "700" }}>
+						{activeSite?.name?.[0]?.toUpperCase() ?? "?"}
+					</span>
+				</div>
+				<span
+					style={{
+						fontFamily: C.sans,
+						fontSize: "12px",
+						color: C.text,
+						flex: 1,
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+					}}>
+					{activeSite?.domain ?? "Select site"}
+				</span>
+				<span style={{ color: C.textMuted, fontSize: "10px" }}>▾</span>
+			</button>
+
+			<AnimatePresence>
+				{open && (
+					<motion.div
+						initial={{ opacity: 0, y: -4 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -4 }}
+						transition={{ duration: 0.15 }}
+						style={{
+							position: "absolute",
+							top: "100%",
+							left: "14px",
+							right: "14px",
+							zIndex: 50,
+							backgroundColor: C.surface,
+							border: `1px solid ${C.borderEl}`,
+							borderRadius: "10px",
+							overflow: "hidden",
+							boxShadow: "0 8px 24px oklch(0 0 0 / 30%)",
+						}}>
+						{sites.map((site) => (
+							<div
+								key={site.id}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									padding: "10px 12px",
+									borderBottom: `1px solid ${C.border}`,
+									gap: "8px",
+								}}>
+								<button
+									type="button"
+									onClick={() => { onSelect(site); setOpen(false); setConfirmDelete(null); }}
+									style={{
+										flex: 1,
+										display: "flex",
+										alignItems: "center",
+										gap: "8px",
+										background: "none",
+										border: "none",
+										cursor: "pointer",
+										padding: 0,
+										textAlign: "left",
+									}}>
+									<div
+										style={{
+											width: "14px",
+											height: "14px",
+											borderRadius: "3px",
+											backgroundColor: site.id === activeSite?.id ? C.accent : C.bg,
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											flexShrink: 0,
+										}}>
+										{site.id === activeSite?.id && (
+											<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+												<polyline points="20 6 9 17 4 12" />
+											</svg>
+										)}
+									</div>
+									<div>
+										<span style={{ fontFamily: C.sans, fontSize: "12px", color: C.text, display: "block" }}>
+											{site.name}
+										</span>
+										<span style={{ fontFamily: C.mono, fontSize: "10px", color: C.textMuted }}>
+											{site.domain}
+										</span>
+									</div>
+								</button>
+								{confirmDelete === site.id ? (
+									<div style={{ display: "flex", gap: "4px" }}>
+										<button
+											type="button"
+											onClick={() => { onDelete(site); setConfirmDelete(null); setOpen(false); }}
+											style={{
+												padding: "3px 8px",
+												borderRadius: "5px",
+												fontSize: "10px",
+												fontFamily: C.mono,
+												backgroundColor: C.redBg,
+												color: C.redText,
+												border: "none",
+												cursor: "pointer",
+											}}>
+											Confirm
+										</button>
+										<button
+											type="button"
+											onClick={() => setConfirmDelete(null)}
+											style={{
+												padding: "3px 6px",
+												borderRadius: "5px",
+												fontSize: "10px",
+												fontFamily: C.mono,
+												backgroundColor: "transparent",
+												color: C.textMuted,
+												border: `1px solid ${C.border}`,
+												cursor: "pointer",
+											}}>
+											No
+										</button>
+									</div>
+								) : (
+									<button
+										type="button"
+										onClick={() => setConfirmDelete(site.id)}
+										title="Delete site"
+										style={{
+											width: "24px",
+											height: "24px",
+											borderRadius: "5px",
+											border: `1px solid ${C.border}`,
+											backgroundColor: "transparent",
+											color: C.textMuted,
+											cursor: "pointer",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											flexShrink: 0,
+										}}>
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+											<path d="M3 6h18" />
+											<path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+											<path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+										</svg>
+									</button>
+								)}
+							</div>
+						))}
+						<Link
+							href="/onboarding?step=add-site"
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: "8px",
+								padding: "10px 12px",
+								fontFamily: C.sans,
+								fontSize: "12px",
+								color: C.accentText,
+								textDecoration: "none",
+								fontWeight: "500",
+							}}>
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+								<line x1="12" y1="5" x2="12" y2="19" />
+								<line x1="5" y1="12" x2="19" y2="12" />
+							</svg>
+							Add new site
+						</Link>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</div>
 	);
 }
 
@@ -816,18 +917,27 @@ const NAV_ITEMS = [
 	{ id: "sources", label: "Sources", icon: "⊞" },
 	{ id: "devices", label: "Devices", icon: "⊡" },
 	{ id: "goals", label: "Goals", icon: "◎" },
+	{ id: "team", label: "Team", icon: "⊕", href: "/settings/team" },
 ];
 
 function Sidebar({
 	active,
 	onNav,
 	liveCount,
+	sites,
+	activeSite,
+	onSelectSite,
+	onDeleteSite,
 	onLogout,
 	onClose,
 }: {
 	active: string;
 	onNav: (id: string) => void;
 	liveCount: number;
+	sites: SiteData[];
+	activeSite: SiteData | null;
+	onSelectSite: (site: SiteData) => void;
+	onDeleteSite: (site: SiteData) => void;
 	onLogout: () => void;
 	onClose?: () => void;
 }) {
@@ -845,236 +955,179 @@ function Sidebar({
 				top: 0,
 				overflowY: "auto",
 			}}>
-		{/* Logo */}
-		<div
-			style={{
-				padding: "20px 20px",
-				borderBottom: `1px solid ${C.border}`,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-			}}>
-			<Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
-				<LogoMark size={28} />
-				<span
-					style={{
-						fontFamily: C.display,
-						fontSize: "15px",
-						fontWeight: "700",
-						color: C.text,
-						letterSpacing: "-0.02em",
-					}}>
-					Traytic
-				</span>
-			</Link>
-			{onClose && (
-				<button
-					onClick={onClose}
-					aria-label="Close menu"
-					style={{
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						width: "28px",
-						height: "28px",
-						borderRadius: "6px",
-						background: "none",
-						border: `1px solid ${C.border}`,
-						color: C.textMuted,
-						cursor: "pointer",
-					}}>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-						<line x1="18" y1="6" x2="6" y2="18" />
-						<line x1="6" y1="6" x2="18" y2="18" />
-					</svg>
-				</button>
-			)}
-		</div>
-
-			{/* Site selector */}
-			<div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: "8px",
-						padding: "8px 10px",
-						borderRadius: "8px",
-						backgroundColor: C.surface,
-						border: `1px solid ${C.border}`,
-						cursor: "pointer",
-					}}>
-					<div
+			<div
+				style={{
+					padding: "20px 20px",
+					borderBottom: `1px solid ${C.border}`,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+				}}>
+				<Link href="/" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+					<LogoMark size={28} />
+					<span style={{ fontFamily: C.display, fontSize: "15px", fontWeight: "700", color: C.text, letterSpacing: "-0.02em" }}>
+						Traytic
+					</span>
+				</Link>
+				{onClose && (
+					<button
+						onClick={onClose}
+						aria-label="Close menu"
 						style={{
-							width: "18px",
-							height: "18px",
-							borderRadius: "4px",
-							backgroundColor: C.accent,
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
-							flexShrink: 0,
+							width: "28px",
+							height: "28px",
+							borderRadius: "6px",
+							background: "none",
+							border: `1px solid ${C.border}`,
+							color: C.textMuted,
+							cursor: "pointer",
 						}}>
-						<span style={{ fontSize: "8px", color: "#fff", fontWeight: "700" }}>M</span>
-					</div>
-					<span
-						style={{
-							fontFamily: C.sans,
-							fontSize: "12px",
-							color: C.text,
-							flex: 1,
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-							whiteSpace: "nowrap",
-						}}>
-						mystartup.com
-					</span>
-					<span style={{ color: C.textMuted, fontSize: "10px" }}>▾</span>
-				</div>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+							<line x1="18" y1="6" x2="6" y2="18" />
+							<line x1="6" y1="6" x2="18" y2="18" />
+						</svg>
+					</button>
+				)}
 			</div>
 
-			{/* Live count */}
+			<SiteSelector
+				sites={sites}
+				activeSite={activeSite}
+				onSelect={onSelectSite}
+				onDelete={onDeleteSite}
+			/>
+
 			<div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}` }}>
 				<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-					<span
-						style={{
-							width: "7px",
-							height: "7px",
-							borderRadius: "50%",
-							backgroundColor: C.green,
-							boxShadow: `0 0 8px ${C.green}`,
-							flexShrink: 0,
-						}}
-					/>
-					<span
-						style={{
-							fontFamily: C.mono,
-							fontSize: "10px",
-							color: C.green,
-							textTransform: "uppercase",
-							letterSpacing: "0.08em",
-						}}>
+					<span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: C.green, boxShadow: `0 0 8px ${C.green}`, flexShrink: 0 }} />
+					<span style={{ fontFamily: C.mono, fontSize: "10px", color: C.green, textTransform: "uppercase", letterSpacing: "0.08em" }}>
 						Live right now
 					</span>
 				</div>
-				<RealtimeCounter />
+				<RealtimeCounter count={liveCount} />
 				<span style={{ fontFamily: C.mono, fontSize: "10px", color: C.textMuted, marginTop: "2px", display: "block" }}>
 					active visitors
 				</span>
 			</div>
 
-			{/* Nav */}
 			<nav style={{ padding: "10px 10px", flex: 1 }}>
-				{NAV_ITEMS.map((item) => (
-					<button
-						key={item.id}
-						onClick={() => onNav(item.id)}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: "10px",
-							width: "100%",
-							padding: "9px 12px",
-							borderRadius: "8px",
-							backgroundColor: active === item.id ? C.surface : "transparent",
-							border: active === item.id ? `1px solid ${C.border}` : "1px solid transparent",
-							color: active === item.id ? C.text : C.textMuted,
-							fontFamily: C.sans,
-							fontSize: "13px",
-							fontWeight: active === item.id ? "500" : "400",
-							cursor: "pointer",
-							transition: "all 0.12s",
-							textAlign: "left",
-							marginBottom: "2px",
-						}}>
-						<span style={{ fontSize: "12px", opacity: 0.7, flexShrink: 0 }}>{item.icon}</span>
-						<span style={{ flex: 1 }}>{item.label}</span>
-						{item.live && (
-							<span
-								style={{
-									fontSize: "9px",
-									backgroundColor: C.greenBg,
-									color: C.greenText,
-									border: `1px solid ${C.greenBorder}`,
-									padding: "1px 5px",
-									borderRadius: "4px",
-									fontFamily: C.mono,
-									textTransform: "uppercase",
-									letterSpacing: "0.06em",
-								}}>
-								Live
-							</span>
-						)}
-					</button>
-				))}
+				{NAV_ITEMS.map((item) => {
+					const navStyle: React.CSSProperties = {
+						display: "flex",
+						alignItems: "center",
+						gap: "10px",
+						width: "100%",
+						padding: "9px 12px",
+						borderRadius: "8px",
+						backgroundColor: active === item.id ? C.surface : "transparent",
+						border: active === item.id ? `1px solid ${C.border}` : "1px solid transparent",
+						color: active === item.id ? C.text : C.textMuted,
+						fontFamily: C.sans,
+						fontSize: "13px",
+						fontWeight: active === item.id ? "500" : "400",
+						cursor: "pointer",
+						transition: "all 0.12s",
+						textAlign: "left" as const,
+						marginBottom: "2px",
+						textDecoration: "none",
+					};
+					const content = (
+						<>
+							<span style={{ fontSize: "12px", opacity: 0.7, flexShrink: 0 }}>{item.icon}</span>
+							<span style={{ flex: 1 }}>{item.label}</span>
+							{item.live && (
+								<span
+									style={{
+										fontSize: "9px",
+										backgroundColor: C.greenBg,
+										color: C.greenText,
+										border: `1px solid ${C.greenBorder}`,
+										padding: "1px 5px",
+										borderRadius: "4px",
+										fontFamily: C.mono,
+										textTransform: "uppercase",
+										letterSpacing: "0.06em",
+									}}>
+									Live
+								</span>
+							)}
+						</>
+					);
+					if (item.href) {
+						return (
+							<Link key={item.id} href={item.href} style={navStyle}>
+								{content}
+							</Link>
+						);
+					}
+					return (
+						<button key={item.id} onClick={() => onNav(item.id)} style={navStyle}>
+							{content}
+						</button>
+					);
+				})}
 			</nav>
 
-		{/* Upgrade CTA */}
-		<div
-			style={{
-				padding: "14px",
-				margin: "0 10px 14px",
-				borderRadius: "10px",
-				backgroundColor: C.accentBg,
-				border: `1px solid ${C.accentBorder}`,
-			}}>
-			<p
+			<div
 				style={{
-					fontFamily: C.sans,
-					fontSize: "12px",
-					color: C.accentText,
-					marginBottom: "10px",
-					lineHeight: "1.5",
+					padding: "14px",
+					margin: "0 10px 14px",
+					borderRadius: "10px",
+					backgroundColor: C.accentBg,
+					border: `1px solid ${C.accentBorder}`,
 				}}>
-				Add more sites and unlock higher limits.
-			</p>
-			<Link
-				href="/upgrade?plan=pro"
-				style={{
-					display: "block",
-					padding: "7px 12px",
-					borderRadius: "7px",
-					backgroundColor: C.accent,
-					color: "#fff",
-					fontFamily: C.sans,
-					fontSize: "12px",
-					fontWeight: "600",
-					textDecoration: "none",
-					textAlign: "center",
-				}}>
-				Upgrade to Pro →
-			</Link>
-		</div>
+				<p style={{ fontFamily: C.sans, fontSize: "12px", color: C.accentText, marginBottom: "10px", lineHeight: "1.5" }}>
+					Add more sites and unlock higher limits.
+				</p>
+				<Link
+					href="/upgrade?plan=pro"
+					style={{
+						display: "block",
+						padding: "7px 12px",
+						borderRadius: "7px",
+						backgroundColor: C.accent,
+						color: "#fff",
+						fontFamily: C.sans,
+						fontSize: "12px",
+						fontWeight: "600",
+						textDecoration: "none",
+						textAlign: "center",
+					}}>
+					Upgrade to Pro →
+				</Link>
+			</div>
 
-		{/* Logout */}
-		<div style={{ padding: "0 10px 14px" }}>
-			<button
-				onClick={onLogout}
-				style={{
-					display: "flex",
-					alignItems: "center",
-					gap: "8px",
-					width: "100%",
-					padding: "9px 12px",
-					borderRadius: "8px",
-					backgroundColor: "transparent",
-					border: `1px solid ${C.border}`,
-					color: C.textMuted,
-					fontFamily: C.sans,
-					fontSize: "13px",
-					cursor: "pointer",
-					transition: "all 0.12s",
-					textAlign: "left",
-				}}>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-					<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-					<polyline points="16 17 21 12 16 7" />
-					<line x1="21" y1="12" x2="9" y2="12" />
-				</svg>
-				Log out
-			</button>
+			<div style={{ padding: "0 10px 14px" }}>
+				<button
+					onClick={onLogout}
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: "8px",
+						width: "100%",
+						padding: "9px 12px",
+						borderRadius: "8px",
+						backgroundColor: "transparent",
+						border: `1px solid ${C.border}`,
+						color: C.textMuted,
+						fontFamily: C.sans,
+						fontSize: "13px",
+						cursor: "pointer",
+						transition: "all 0.12s",
+						textAlign: "left",
+					}}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+						<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+						<polyline points="16 17 21 12 16 7" />
+						<line x1="21" y1="12" x2="9" y2="12" />
+					</svg>
+					Log out
+				</button>
+			</div>
 		</div>
-	</div>
 	);
 }
 
@@ -1083,20 +1136,88 @@ function Sidebar({
 const PERIODS = ["7d", "30d", "90d"] as const;
 type Period = (typeof PERIODS)[number];
 
+async function apiFetch<T>(path: string): Promise<T | null> {
+	try {
+		const res = await fetch(`${API}${path}`, { credentials: "include" });
+		if (!res.ok) return null;
+		return (await res.json()) as T;
+	} catch {
+		return null;
+	}
+}
+
 export default function Dashboard() {
 	const [activeNav, setActiveNav] = useState("overview");
 	const [period, setPeriod] = useState<Period>("30d");
-	const [liveCount] = useState(47);
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const [loggingOut, setLoggingOut] = useState(false);
+	const [loading, setLoading] = useState(true);
+
+	const [sites, setSites] = useState<SiteData[]>([]);
+	const [activeSite, setActiveSite] = useState<SiteData | null>(null);
+	const [liveCount, setLiveCount] = useState(0);
+
+	const [overview, setOverview] = useState<OverviewData | null>(null);
+	const [timeseries, setTimeseries] = useState<TimeseriesRow[]>([]);
+	const [pages, setPages] = useState<PageRow[]>([]);
+	const [sources, setSources] = useState<SourceRow[]>([]);
+	const [devices, setDevices] = useState<DeviceRow[]>([]);
+	const [countries, setCountries] = useState<CountryRow[]>([]);
+
+	const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+	useEffect(() => {
+		apiFetch<SiteData[]>("/api/sites").then((data) => {
+			if (!data || data.length === 0) {
+				window.location.href = "/onboarding";
+				return;
+			}
+			setSites(data);
+			setActiveSite(data[0]);
+			setLoading(false);
+		});
+	}, []);
+
+	const fetchDashboardData = useCallback(async (siteId: string, p: Period) => {
+		const [ov, ts, pg, src, dev, ctry] = await Promise.all([
+			apiFetch<OverviewData>(`/api/events/${siteId}/overview?period=${p}`),
+			apiFetch<TimeseriesRow[]>(`/api/events/${siteId}/timeseries?period=${p}`),
+			apiFetch<PageRow[]>(`/api/events/${siteId}/pages?period=${p}`),
+			apiFetch<SourceRow[]>(`/api/events/${siteId}/sources?period=${p}`),
+			apiFetch<DeviceRow[]>(`/api/events/${siteId}/devices?period=${p}`),
+			apiFetch<CountryRow[]>(`/api/events/${siteId}/countries?period=${p}`),
+		]);
+		setOverview(ov);
+		setTimeseries(ts ?? []);
+		setPages(pg ?? []);
+		setSources(src ?? []);
+		setDevices(dev ?? []);
+		setCountries(ctry ?? []);
+	}, []);
+
+	useEffect(() => {
+		if (!activeSite) return;
+		fetchDashboardData(activeSite.id, period);
+	}, [activeSite, period, fetchDashboardData]);
+
+	const fetchLive = useCallback(async () => {
+		if (!activeSite) return;
+		const count = await apiFetch<number>(`/api/events/${activeSite.id}/live`);
+		if (count !== null) setLiveCount(count);
+	}, [activeSite]);
+
+	useEffect(() => {
+		fetchLive();
+		liveIntervalRef.current = setInterval(fetchLive, 10000);
+		return () => {
+			if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
+		};
+	}, [fetchLive]);
 
 	const handleLogout = useCallback(async () => {
 		setLoggingOut(true);
 		try {
-			await fetch(`${API}/api/auth/sign-out`, {
-				method: "POST",
-				credentials: "include",
-			});
+			await fetch(`${API}/api/auth/sign-out`, { method: "POST", credentials: "include" });
 		} catch {
 			// proceed regardless
 		}
@@ -1108,20 +1229,70 @@ export default function Dashboard() {
 		setSidebarOpen(false);
 	}, []);
 
-	const visitorTotal = VISITORS_30D.reduce((a, b) => a + b, 0);
-	const pvTotal = PAGEVIEWS_30D.reduce((a, b) => a + b, 0);
-	const visChange = (((CURR_VISITORS - PREV_VISITORS) / PREV_VISITORS) * 100).toFixed(1);
-	const sparkVisitors = VISITORS_30D.slice(-8);
-	const sparkPV = PAGEVIEWS_30D.slice(-8);
+	const handleSelectSite = useCallback((site: SiteData) => {
+		setActiveSite(site);
+	}, []);
+
+	const handleDeleteSite = useCallback(async (site: SiteData) => {
+		try {
+			const res = await fetch(`${API}/api/sites/${site.id}`, { method: "DELETE", credentials: "include" });
+			if (!res.ok) {
+				const d = (await res.json()) as { message?: string };
+				throw new Error(d.message ?? "Failed to delete site");
+			}
+			toast.success(`${site.domain} deleted`);
+			setSites((prev) => {
+				const remaining = prev.filter((s) => s.id !== site.id);
+				if (remaining.length === 0) {
+					window.location.href = "/onboarding";
+					return remaining;
+				}
+				if (activeSite?.id === site.id) {
+					setActiveSite(remaining[0]);
+				}
+				return remaining;
+			});
+		} catch (err: unknown) {
+			toast.error(err instanceof Error ? err.message : "Something went wrong");
+		}
+	}, [activeSite]);
+
+	const visitors = timeseries.map((r) => Number(r.visitors));
+	const pageviewsArr = timeseries.map((r) => Number(r.pageviews));
+	const visitorTotal = overview ? Number(overview.visitors) : 0;
+	const pvTotal = overview ? Number(overview.pageviews) : 0;
+	const bounceRate = overview ? Number(overview.bounce_rate) : 0;
+	const avgDuration = overview ? Number(overview.avg_duration_ms) : 0;
+
+	if (loading) {
+		return (
+			<div style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				height: "100vh",
+				backgroundColor: C.bg,
+			}}>
+				<Spinner size={24} />
+			</div>
+		);
+	}
 
 	return (
 		<div style={{ display: "flex", minHeight: "100vh", backgroundColor: C.bg }}>
-			{/* Desktop sidebar */}
 			<div className="hidden lg:flex" style={{ flexShrink: 0 }}>
-				<Sidebar active={activeNav} onNav={setActiveNav} liveCount={liveCount} onLogout={handleLogout} />
+				<Sidebar
+					active={activeNav}
+					onNav={setActiveNav}
+					liveCount={liveCount}
+					sites={sites}
+					activeSite={activeSite}
+					onSelectSite={handleSelectSite}
+					onDeleteSite={handleDeleteSite}
+					onLogout={handleLogout}
+				/>
 			</div>
 
-			{/* Mobile sidebar overlay */}
 			<AnimatePresence>
 				{sidebarOpen && (
 					<>
@@ -1132,12 +1303,7 @@ export default function Dashboard() {
 							transition={{ duration: 0.2 }}
 							onClick={() => setSidebarOpen(false)}
 							className="lg:hidden"
-							style={{
-								position: "fixed",
-								inset: 0,
-								zIndex: 40,
-								backgroundColor: "oklch(0 0 0 / 60%)",
-							}}
+							style={{ position: "fixed", inset: 0, zIndex: 40, backgroundColor: "oklch(0 0 0 / 60%)" }}
 						/>
 						<motion.div
 							initial={{ x: -280 }}
@@ -1145,17 +1311,15 @@ export default function Dashboard() {
 							exit={{ x: -280 }}
 							transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
 							className="lg:hidden"
-							style={{
-								position: "fixed",
-								top: 0,
-								left: 0,
-								bottom: 0,
-								zIndex: 50,
-							}}>
+							style={{ position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 50 }}>
 							<Sidebar
 								active={activeNav}
 								onNav={handleNav}
 								liveCount={liveCount}
+								sites={sites}
+								activeSite={activeSite}
+								onSelectSite={handleSelectSite}
+								onDeleteSite={handleDeleteSite}
 								onLogout={handleLogout}
 								onClose={() => setSidebarOpen(false)}
 							/>
@@ -1164,9 +1328,7 @@ export default function Dashboard() {
 				)}
 			</AnimatePresence>
 
-			{/* Main */}
 			<div style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
-				{/* Top bar */}
 				<div
 					className="px-4 sm:px-7"
 					style={{
@@ -1182,7 +1344,6 @@ export default function Dashboard() {
 						justifyContent: "space-between",
 						gap: "12px",
 					}}>
-					{/* Hamburger for mobile */}
 					<button
 						onClick={() => setSidebarOpen(true)}
 						className="lg:hidden"
@@ -1220,11 +1381,10 @@ export default function Dashboard() {
 							Overview
 						</h1>
 						<span style={{ fontFamily: C.mono, fontSize: "11px", color: C.textMuted }}>
-							mystartup.com
+							{activeSite?.domain ?? ""}
 						</span>
 					</div>
 
-					{/* Period selector */}
 					<div
 						style={{
 							display: "flex",
@@ -1259,66 +1419,51 @@ export default function Dashboard() {
 					</div>
 				</div>
 
-				{/* Content */}
 				<div className="p-4 sm:p-7">
-					{/* Metric cards */}
-					<div
-						className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
+					<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 mb-5">
 						<MetricCard
 							label="Unique visitors"
 							value={fmt(visitorTotal)}
-							change={`${visChange}%`}
-							good={parseFloat(visChange) > 0}
-							sparkData={sparkVisitors}
+							sparkData={visitors.slice(-8)}
 							delay={0.05}
 						/>
 						<MetricCard
 							label="Pageviews"
 							value={fmt(pvTotal)}
-							change="8.7%"
-							good={true}
-							sparkData={sparkPV}
+							sparkData={pageviewsArr.slice(-8)}
 							delay={0.1}
 						/>
 						<MetricCard
 							label="Bounce rate"
-							value="42.3"
+							value={bounceRate.toFixed(1)}
 							unit="%"
-							change="3.2%"
-							good={true}
-							sparkData={[58, 54, 56, 52, 49, 46, 44, 42]}
+							sparkData={[]}
 							delay={0.15}
 						/>
 						<MetricCard
 							label="Avg. session"
-							value="2:47"
-							change="0:18"
-							good={true}
-							sparkData={[148, 152, 155, 162, 158, 165, 170, 167]}
+							value={fmtDuration(avgDuration)}
+							sparkData={[]}
 							delay={0.2}
 						/>
 					</div>
 
-					{/* Main chart */}
 					<div style={{ marginBottom: "20px" }}>
-						<MainChart period={period} />
+						<MainChart timeseries={timeseries} />
 					</div>
 
-					{/* Tables row */}
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 mb-3.5">
-						<TopPagesTable />
-						<TopSourcesTable />
+						<TopPagesTable pages={pages} />
+						<TopSourcesTable sources={sources} />
 					</div>
 
-					{/* Breakdown row */}
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-						<DevicesBreakdown />
-						<CountriesBreakdown />
+						<DevicesBreakdown devices={devices} />
+						<CountriesBreakdown countries={countries} />
 					</div>
 				</div>
 			</div>
 
-			{/* Logging out overlay */}
 			<AnimatePresence>
 				{loggingOut && (
 					<motion.div
