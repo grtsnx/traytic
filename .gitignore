@@ -24,6 +24,9 @@ build
 npm-debug.log*
 bun-debug.log*
 
+# Dependabot
+dependabot-alerts.json
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,6 +1,6 @@
 # Traytic
 
-Open-source, privacy-first analytics platform. A self-hostable alternative to Vercel Analytics and Cloudflare Analytics — built for developers, captured in real time.
+Privacy-first, open-source web analytics. No cookies. No personal data. Self-hostable in one command.
 
 ```bash
 npm install @traytic/analytics
@@ -12,12 +12,10 @@ import { Analytics } from '@traytic/analytics/next'
 
 export default function RootLayout({ children }) {
   return (
-    <html>
-      <body>
-        {children}
-        <Analytics siteId={process.env.NEXT_PUBLIC_TRAYTIC_SITE_ID!} />
-      </body>
-    </html>
+    <html><body>
+      {children}
+      <Analytics siteId="your-site-id" />
+    </body></html>
   )
 }
 ```
@@ -27,250 +25,203 @@ export default function RootLayout({ children }) {
 ## Features
 
 - **Real-time** — live visitor counts via SSE, no polling
-- **Privacy-first** — no cookies, no raw IP storage, GDPR-compliant fingerprinting via daily-rotating SHA-256 hash
-- **Web Vitals** — LCP, CLS, INP, TTFB, FCP per route with P75/P95 breakdown
+- **Privacy-first** — no cookies, no raw IP storage, daily-rotating SHA-256 visitor fingerprint
+- **Web Vitals** — LCP, CLS, INP, TTFB, FCP per route
 - **Custom events** — `track('signup', { plan: 'pro' })`
-- **Bot filtering** — server-side UA pattern detection
-- **Self-hostable** — one `docker compose up` and everything is running
-- **Dual payments** — Paystack for Africa (NGN/GHS/KES/ZAR), Polar for everywhere else (USD/EUR)
-- **Framework adapters** — Next.js App Router, React SPA, more coming
+- **Bot filtering** — server-side UA detection
+- **Social auth** — GitHub, Google, or email + password
+- **Dual billing** — Paystack for Africa (NGN/GHS/KES/ZAR), Polar everywhere else (USD/EUR)
+- **Self-hostable** — `docker compose up` and everything runs
 
 ---
 
-## Monorepo Structure
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Web | Next.js 15 (App Router) |
+| API | NestJS 10 + Fastify |
+| Analytics DB | ClickHouse — partitioned by month |
+| App DB | PostgreSQL + Prisma 7 |
+| Cache | Redis |
+| Auth | Better Auth |
+| Real-time | Server-Sent Events (SSE) |
+| SDK | `@traytic/analytics` — ESM + CJS, < 3 kB |
+| Monorepo | Bun 1.3.9 workspaces + Turborepo |
+
+---
+
+## Plans
+
+| Plan | Sites | Events / month | Price |
+|---|---|---|---|
+| Free | 1 | 50 000 | Free — no card |
+| Pro | 10 | 1 000 000 | $5 · ₦7 900 / month |
+| Team | Unlimited | 10 000 000 | $19 · ₦29 900 / month |
+
+---
+
+## Quick start (Docker)
+
+```bash
+# 1. Clone
+git clone https://github.com/traytic/traytic && cd traytic
+
+# 2. Copy and configure environment
+cp apps/api/.env.example apps/api/.env
+# Edit apps/api/.env — set BETTER_AUTH_SECRET at minimum
+# Generate one: openssl rand -hex 32
+
+# 3. Start everything (databases + API + web)
+docker compose up --build
+```
+
+| URL | Service |
+|---|---|
+| http://localhost:3000 | Web |
+| http://localhost:3001 | API |
+| http://localhost:3001/docs | Swagger |
+
+The API container runs `prisma migrate deploy` automatically on startup.
+ClickHouse schema is applied automatically from `docker-entrypoint-initdb.d`.
+
+---
+
+## Local development
+
+**Requirements:** Bun ≥ 1.3.9 · Docker
+
+```bash
+# Install dependencies
+bun install
+
+# Start databases only
+docker compose up postgres clickhouse redis -d
+
+# Configure environment
+cp apps/api/.env.example apps/api/.env
+# Set BETTER_AUTH_SECRET in apps/api/.env
+
+# Run migrations
+cd apps/api && bun run prisma:migrate && cd ../..
+
+# Start all apps with hot reload
+bun dev
+```
+
+---
+
+## Environment variables
+
+All variables live in `apps/api/.env`.
+
+### Required
+
+```env
+DATABASE_URL=postgresql://traytic:traytic_secret@localhost:5432/traytic
+BETTER_AUTH_SECRET=<random 32-char string — run: openssl rand -hex 32>
+```
+
+### Social auth (optional)
+
+Create OAuth apps and set the callback URLs below, then fill in the credentials:
+
+| Provider | Callback URL |
+|---|---|
+| GitHub | `http://localhost:3001/api/auth/callback/github` |
+| Google | `http://localhost:3001/api/auth/callback/google` |
+
+```env
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+```
+
+Leave blank to show only email/password on the auth forms.
+
+### Billing (optional)
+
+```env
+# Africa — https://dashboard.paystack.com
+PAYSTACK_SECRET_KEY=
+PAYSTACK_PUBLIC_KEY=
+PAYSTACK_WEBHOOK_SECRET=
+
+# Global — https://polar.sh
+POLAR_ACCESS_TOKEN=
+POLAR_WEBHOOK_SECRET=
+POLAR_ORGANIZATION_ID=
+```
+
+Register webhook endpoints in your provider dashboards:
+
+| Provider | Webhook URL |
+|---|---|
+| Paystack | `https://your-api-domain/api/billing/webhooks/paystack` |
+| Polar | `https://your-api-domain/api/billing/webhooks/polar` |
+
+---
+
+## Project structure
 
 ```
 traytic/
 ├── apps/
-│   ├── web/          # Next.js 15 dashboard + landing  (port 3000)
-│   └── api/          # NestJS 10 + Fastify collector    (port 3001)
+│   ├── api/                    # NestJS API (port 3001)
+│   │   ├── src/
+│   │   │   ├── modules/
+│   │   │   │   ├── auth/       # Better Auth + session guard
+│   │   │   │   ├── sites/      # Sites CRUD + plan limits
+│   │   │   │   ├── collect/    # POST /collect — no auth, rate-limited
+│   │   │   │   ├── events/     # ClickHouse query endpoints
+│   │   │   │   ├── stream/     # SSE real-time feed
+│   │   │   │   └── billing/    # Paystack + Polar checkout + webhooks
+│   │   │   └── databases/
+│   │   │       ├── prisma/     # Schema + migrations
+│   │   │       └── clickhouse/ # Events table DDL
+│   │   ├── Dockerfile
+│   │   └── entrypoint.sh       # migrate deploy → start server
+│   └── web/                    # Next.js app (port 3000)
+│       ├── app/                # Routes
+│       └── views/              # Page components
 ├── packages/
-│   ├── sdk/          # @traytic/analytics — the npm package  (<3kb)
-│   └── types/        # @traytic/types — shared TypeScript types
-├── docker-compose.yml
-└── turbo.json
+│   ├── sdk/                    # @traytic/analytics npm package
+│   └── types/                  # Shared TypeScript types
+└── docker-compose.yml
 ```
 
 ---
 
-## Tech Stack
-
-| Layer | Tech |
-|---|---|
-| Dashboard | Next.js 15, React 19, Tailwind v4, shadcn/ui |
-| API | NestJS 10, Fastify |
-| Events DB | ClickHouse (columnar, real-time aggregations) |
-| Relational DB | PostgreSQL + Prisma |
-| Auth | Better Auth |
-| Real-time | Server-Sent Events (SSE) |
-| SDK | TypeScript + tsup (ESM + CJS, <3kb) |
-| Payments (Africa) | Paystack (NGN, GHS, KES, ZAR) |
-| Payments (Global) | Polar (USD, EUR) |
-| Monorepo | Bun 1.3.9 workspaces + Turborepo |
-| Self-host | Docker Compose |
-
----
-
-## Quick Start (Docker)
-
-The fastest way to run Traytic. One command builds and runs everything — databases, API, and web app.
-
-### 1. Clone
-
-```bash
-git clone https://github.com/traytic/traytic
-cd traytic
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and set **one required value**:
-
-```env
-BETTER_AUTH_SECRET=your_random_32_char_string_here
-```
-
-Generate one with: `openssl rand -hex 32`
-
-Everything else (database URLs, ports, hostnames) is pre-configured for Docker and works out of the box.
-
-### 3. Build and run
-
-```bash
-docker compose --profile prod up --build
-```
-
-| Service | URL |
-|---|---|
-| Web dashboard | http://localhost:3000 |
-| API | http://localhost:3001 |
-| Swagger docs | http://localhost:3001/docs |
-
-> Prisma migrations run automatically on first API startup via `entrypoint.sh`.
-> ClickHouse schema is applied automatically via the `docker-entrypoint-initdb.d` mount.
-
----
-
-## Local Development
-
-For active development with hot-reload on your host machine.
-
-### Prerequisites
-
-- [Bun](https://bun.sh) >= 1.1
-- Docker + Docker Compose
-
-### 1. Install dependencies
-
-```bash
-bun install
-```
-
-### 2. Start databases only
-
-```bash
-docker compose up -d
-```
-
-### 3. Configure environment
-
-```bash
-cp .env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-Edit `apps/api/.env`:
-- Set `BETTER_AUTH_SECRET` to any 32+ char string
-- DB connection strings already point to `localhost` and match the Docker defaults — no changes needed
-
-### 4. Run Prisma migrations
-
-```bash
-cd apps/api && bun run prisma:migrate
-```
-
-### 5. Start all dev servers
-
-```bash
-bun dev
-```
-
-Hot-reload is active for both `apps/web` and `apps/api`.
-
----
-
-## Deploying to Coolify
-
-1. Point Coolify at your repo and select **Docker Compose** as the deployment method
-2. Set these environment variables in Coolify's UI:
-
-```env
-BETTER_AUTH_SECRET=<generated secret>
-
-# Set to your actual public domains
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com
-NEXT_PUBLIC_APP_URL=https://yourdomain.com
-BETTER_AUTH_URL=https://api.yourdomain.com
-APP_URL=https://yourdomain.com
-API_URL=https://api.yourdomain.com
-```
-
-> `NEXT_PUBLIC_*` variables are baked into the JS bundle at build time. If you change your domain later, trigger a rebuild of the `web` service.
-
----
-
-## Data Flow
+## Data flow
 
 ```
-User's website (SDK)
-  └── POST /collect  ──►  NestJS API
-                              ├── filter bots (UA regex)
-                              ├── enrich: IP → geo, UA → device/browser
-                              ├── build visitor_id: SHA256(siteId+ip+ua+date)
-                              ├── async insert ──► ClickHouse
-                              └── emit ──► SSE stream ──► Dashboard live view
-```
-
-### Databases
-
-**PostgreSQL** — relational / business data:
-Users, orgs, sessions, sites, API keys, subscriptions, invoices, goals, alerts
-
-**ClickHouse** — analytics events:
-Pageviews, custom events, web vitals, errors. Partitioned by month, ordered by `(site_id, ts)`. Aggregation queries return in milliseconds at any scale.
-
----
-
-## API Reference
-
-### Collect (public, no auth)
-
-```
-POST /collect
-Content-Type: application/json
-
-{
-  "siteId": "your_site_id",
-  "events": [
-    {
-      "type": "pageview",
-      "url": "https://yoursite.com/blog/hello",
-      "referrer": "https://google.com"
-    }
-  ]
-}
-```
-
-Returns `204 No Content`. All processing is async.
-
-### Stats (authenticated)
-
-```
-GET /api/events/:siteId/overview?period=30d
-GET /api/events/:siteId/timeseries?period=7d
-GET /api/events/:siteId/pages?period=30d
-GET /api/events/:siteId/sources?period=30d
-GET /api/events/:siteId/countries?period=30d
-GET /api/events/:siteId/devices?period=30d
-GET /api/events/:siteId/vitals?period=30d
-```
-
-Period options: `24h` | `7d` | `30d` | `90d`
-
-### Real-time stream (SSE)
-
-```
-GET /api/stream/:siteId
-```
-
-```ts
-const es = new EventSource(`/api/stream/${siteId}`)
-es.onmessage = (e) => console.log(JSON.parse(e.data))
+User's browser (SDK)
+  └── POST /collect
+        ├── drop bots (UA regex)
+        ├── visitor_id = SHA256(siteId + ip + ua + date)  — no PII stored
+        ├── insert → ClickHouse (async, fire-and-forget)
+        └── emit  → SSE stream → live dashboard
 ```
 
 ---
 
 ## SDK
 
-### Next.js (App Router)
+### Next.js
 
 ```tsx
 import { Analytics } from '@traytic/analytics/next'
 
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        {children}
-        <Analytics siteId={process.env.NEXT_PUBLIC_TRAYTIC_SITE_ID!} />
-      </body>
-    </html>
-  )
-}
+<Analytics siteId="your-site-id" />
+```
+
+### React (other frameworks)
+
+```tsx
+import { Analytics } from '@traytic/analytics/react'
+
+<Analytics siteId="your-site-id" />
 ```
 
 ### Custom events
@@ -278,63 +229,77 @@ export default function RootLayout({ children }) {
 ```ts
 import { track } from '@traytic/analytics'
 
-track('signup', { plan: 'pro', source: 'landing' })
-track('purchase', { product: 'shirt', value: '49.99' })
+track('signup', { plan: 'pro' })
+track('purchase', { value: '49.99' })
 ```
 
 ### Self-hosted endpoint
 
 ```tsx
-<Analytics
-  siteId="your_site_id"
-  endpoint="https://your-api.example.com/collect"
-/>
-```
-
-### Privacy options
-
-```tsx
-<Analytics
-  siteId="your_site_id"
-  respectDnt={true}   // honour browser Do Not Track (default: true)
-  hashPaths={true}    // /users/123 → /users/[id]
-/>
+<Analytics siteId="your-site-id" endpoint="https://api.yourdomain.com/collect" />
 ```
 
 ---
 
-## Pricing
+## Deployment (Coolify / Railway / Fly)
 
-| Plan | USD | NGN | Events/mo | Retention |
-|---|---|---|---|---|
-| Free (self-host) | $0 | ₦0 | Unlimited | Unlimited |
-| Pro | $9/mo | ₦14,900/mo | 5M | 2 years |
-| Team | $29/mo | ₦44,900/mo | 50M | 2 years + team features |
+1. Point your host at the repo, pick **Docker Compose** deployment.
+2. Set environment variables — at minimum:
 
-Traytic automatically routes users to the right payment processor:
+```env
+BETTER_AUTH_SECRET=<secret>
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
+BETTER_AUTH_URL=https://api.yourdomain.com
+APP_URL=https://yourdomain.com
+```
 
-| Region | Processor | Currencies |
-|---|---|---|
-| Nigeria, Ghana, Kenya, South Africa | Paystack | NGN, GHS, KES, ZAR |
-| Rest of world | Polar | USD, EUR |
+3. `NEXT_PUBLIC_*` vars are baked into the JS bundle at build time. Change domain → trigger a web rebuild.
+
+---
+
+## API reference
+
+### Collect (public, no auth)
+
+```
+POST /collect
+{ "siteId": "...", "events": [{ "type": "pageview", "url": "...", "referrer": "..." }] }
+```
+
+Returns `204`. Processing is async.
+
+### Stats (authenticated)
+
+```
+GET /api/events/:siteId/overview?period=30d
+GET /api/events/:siteId/timeseries?period=7d
+GET /api/events/:siteId/pages
+GET /api/events/:siteId/sources
+GET /api/events/:siteId/countries
+GET /api/events/:siteId/devices
+GET /api/events/:siteId/vitals
+```
+
+Periods: `24h` · `7d` · `30d` · `90d`
+
+### Real-time (SSE)
+
+```ts
+const es = new EventSource(`/api/stream/${siteId}`, { withCredentials: true })
+es.onmessage = (e) => console.log(JSON.parse(e.data))
+```
 
 ---
 
 ## Roadmap
 
-- [ ] Dashboard UI (charts, tables, live view)
-- [ ] Auth flow (signup, login, org management)
-- [ ] GeoIP integration (MaxMind)
+- [ ] Dashboard UI — charts, tables, live visitor map
+- [ ] GeoIP (MaxMind)
 - [ ] Goals & funnels
-- [ ] Alerts (email + Slack)
-- [ ] Astro, Vue, Svelte adapters
-- [ ] CLI (`bunx traytic dev`)
-
----
-
-## Contributing
-
-Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and workflow. By participating, you agree to our [Code of Conduct](CODE_OF_CONDUCT.md).
+- [ ] Alerts — email + Slack
+- [ ] Astro, Vue, Svelte SDK adapters
+- [ ] CLI — `bunx traytic dev`
 
 ---
 

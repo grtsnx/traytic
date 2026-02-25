@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
+import { ArrowLeft01Icon } from "@hugeicons/react";
 
 // ── Design tokens (shared with home.tsx) ───────────────────────────────────────
 const C = {
@@ -108,14 +110,12 @@ export default function Upgrade() {
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
-	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [checkingSession, setCheckingSession] = useState(true);
 	const [socialLoading, setSocialLoading] = useState<"github" | "google" | null>(null);
 
 	async function signInWithSocial(provider: "github" | "google") {
 		setSocialLoading(provider);
-		setError("");
 		try {
 			const res = await fetch(`${API}/api/auth/sign-in/social`, {
 				method: "POST",
@@ -130,7 +130,7 @@ export default function Upgrade() {
 			const d = await res.json() as { url?: string };
 			if (d.url) window.location.href = d.url;
 		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : "OAuth error");
+			toast.error(err instanceof Error ? err.message : "OAuth error");
 			setSocialLoading(null);
 		}
 	}
@@ -172,7 +172,6 @@ export default function Upgrade() {
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
-		setError("");
 		setLoading(true);
 		try {
 			const authEndpoint = tab === "signup" ? "sign-up/email" : "sign-in/email";
@@ -194,7 +193,7 @@ export default function Upgrade() {
 
 			await initiateCheckout();
 		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : "Something went wrong");
+			toast.error(err instanceof Error ? err.message : "Something went wrong");
 		} finally {
 			setLoading(false);
 		}
@@ -212,7 +211,16 @@ export default function Upgrade() {
 		<div className="min-h-screen" style={{ backgroundColor: C.bg }}>
 			{/* Nav */}
 			<header style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: `${C.bg}ee`, backdropFilter: "blur(12px)" }}>
-				<div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-2">
+				<div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-4">
+					<a
+						href="/"
+						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}
+						onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
+						onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}>
+						<ArrowLeft01Icon size={18} color="currentColor" />
+						<span style={{ fontFamily: C.sans, fontSize: "13px" }}>Back</span>
+					</a>
+					<div style={{ width: "1px", height: "18px", backgroundColor: C.border }} />
 					<a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
 						<LogoMark size={24} />
 						<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
@@ -316,7 +324,7 @@ export default function Upgrade() {
 						{(["signup", "signin"] as const).map((t) => (
 							<button
 								key={t}
-								onClick={() => { setTab(t); setError(""); }}
+								onClick={() => setTab(t)}
 								className="flex-1 py-2 rounded-md text-[13px] font-medium transition-all"
 								style={{
 									fontFamily: C.sans,
@@ -391,18 +399,6 @@ export default function Upgrade() {
 							/>
 						</div>
 
-						<AnimatePresence>
-							{error && (
-								<motion.p
-									initial={{ opacity: 0, y: -4 }}
-									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: -4 }}
-									className="text-[12px] px-3 py-2 rounded-lg"
-									style={{ color: C.red, backgroundColor: `oklch(0.65 0.2 25 / 10%)`, border: `1px solid oklch(0.65 0.2 25 / 20%)`, fontFamily: C.mono }}>
-									{error}
-								</motion.p>
-							)}
-						</AnimatePresence>
 
 						<button
 							type="submit"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
+import { ArrowLeft01Icon } from "@hugeicons/react";
 
 const C = {
 	bg: "oklch(0.08 0.006 265)",
@@ -50,7 +51,16 @@ export default function BillingSuccess() {
 	return (
 		<div className="min-h-screen flex flex-col" style={{ backgroundColor: C.bg }}>
 			<header style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: `${C.bg}ee`, backdropFilter: "blur(12px)" }}>
-				<div className="max-w-3xl mx-auto px-6 h-14 flex items-center gap-2">
+				<div className="max-w-3xl mx-auto px-6 h-14 flex items-center gap-4">
+					<a
+						href="/"
+						style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", color: C.textMuted, transition: "color 0.15s" }}
+						onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
+						onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}>
+						<ArrowLeft01Icon size={18} color="currentColor" />
+						<span style={{ fontFamily: C.sans, fontSize: "13px" }}>Back</span>
+					</a>
+					<div style={{ width: "1px", height: "18px", backgroundColor: C.border }} />
 					<a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
 						<LogoMark size={24} />
 						<span className="text-[14px] font-semibold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
