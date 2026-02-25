@@ -10,7 +10,7 @@ By participating, you agree to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ### Prerequisites
 
-- **Bun** >= 1.1 ([install](https://bun.sh))
+- **Bun** >= 1.3.9 ([install](https://bun.sh))
 - **Docker** and **Docker Compose** (for PostgreSQL and ClickHouse)
 
 ### Setup
@@ -31,13 +31,13 @@ By participating, you agree to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
 3. **Start databases**
 
    ```bash
-   docker compose up -d
+   docker compose up postgres clickhouse redis -d
    ```
 
 4. **Configure environment**
 
    ```bash
-   cp .env.example apps/api/.env
+   cp apps/api/.env.example apps/api/.env
    cp apps/web/.env.example apps/web/.env
    ```
 

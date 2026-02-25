@@ -1,7 +1,45 @@
 import { Injectable } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { createTransport } from 'nodemailer';
 import { PrismaService } from '../../databases/prisma/prisma.service';
+
+async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+
+  const from = `Traytic <noreply@${process.env.EMAIL_FROM_DOMAIN ?? 'traytic.dev'}>`;
+  const transport = createTransport({
+    host: 'smtp.resend.com',
+    port: 465,
+    secure: true,
+    auth: { user: 'resend', pass: apiKey },
+  });
+
+  await transport.sendMail({
+    from,
+    to,
+    subject: 'Reset your Traytic password',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0d0d14;color:#ededed;border-radius:12px">
+        <div style="margin-bottom:24px">
+          <span style="font-size:18px;font-weight:700;letter-spacing:-0.03em">Traytic</span>
+        </div>
+        <h2 style="margin:0 0 12px;font-size:22px;font-weight:800;letter-spacing:-0.03em">Reset your password</h2>
+        <p style="color:#888;margin:0 0 28px;font-size:14px;line-height:1.6">
+          Click the button below to reset your Traytic password. This link expires in 1 hour.
+        </p>
+        <a href="${resetUrl}"
+           style="display:inline-block;background:#5b6de9;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
+          Reset password
+        </a>
+        <p style="color:#555;font-size:12px;margin:28px 0 0">
+          If you didn't request this, you can safely ignore this email.
+        </p>
+      </div>
+    `,
+  });
+}
 
 function buildSocialProviders() {
   const providers: Record<string, { clientId: string; clientSecret: string }> =
@@ -38,6 +76,9 @@ export class AuthService {
       emailAndPassword: {
         enabled: true,
         requireEmailVerification: false,
+        sendResetPassword: async ({ user, url }) => {
+          await sendPasswordResetEmail(user.email, url);
+        },
       },
       socialProviders: buildSocialProviders(),
       trustedOrigins: [process.env.APP_URL ?? 'http://localhost:3000'],

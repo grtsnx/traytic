@@ -1,6 +1,20 @@
-# Traytic
+<div align="center">
 
-Privacy-first, open-source web analytics. No cookies. No personal data. Self-hostable in one command.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-light.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="assets/logo.svg" />
+  <img src="assets/logo.svg" height="52" alt="Traytic" />
+</picture>
+
+<p>Privacy-first, open-source web analytics.<br>No cookies. No PII. Self-hostable in one command.</p>
+
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-7c3aed?style=flat-square)](LICENSE) &nbsp; [![Bun](https://img.shields.io/badge/bun-1.3.9-fbf0df?style=flat-square&logo=bun)](https://bun.sh) &nbsp; [![Self-hostable](https://img.shields.io/badge/self--hostable-yes-4ade80?style=flat-square)]()
+
+[Features](#features) &nbsp;·&nbsp; [Quick start](#quick-start-docker) &nbsp;·&nbsp; [SDK](#sdk) &nbsp;·&nbsp; [API](#api-reference) &nbsp;·&nbsp; [Roadmap](#roadmap)
+
+</div>
+
+---
 
 ```bash
 npm install @traytic/analytics
@@ -68,8 +82,8 @@ export default function RootLayout({ children }) {
 git clone https://github.com/traytic/traytic && cd traytic
 
 # 2. Copy and configure environment
-cp apps/api/.env.example apps/api/.env
-# Edit apps/api/.env — set BETTER_AUTH_SECRET at minimum
+cp .env.example .env
+# Edit .env — set BETTER_AUTH_SECRET at minimum
 # Generate one: openssl rand -hex 32
 
 # 3. Start everything (databases + API + web)
@@ -100,6 +114,7 @@ docker compose up postgres clickhouse redis -d
 
 # Configure environment
 cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
 # Set BETTER_AUTH_SECRET in apps/api/.env
 
 # Run migrations
@@ -113,7 +128,8 @@ bun dev
 
 ## Environment variables
 
-All variables live in `apps/api/.env`.
+For **Docker**, all variables are read from `.env` at the project root (copy from `.env.example`).
+For **local development**, API variables live in `apps/api/.env` and web variables in `apps/web/.env`.
 
 ### Required
 
@@ -183,8 +199,9 @@ traytic/
 │   │   ├── Dockerfile
 │   │   └── entrypoint.sh       # migrate deploy → start server
 │   └── web/                    # Next.js app (port 3000)
-│       ├── app/                # Routes
-│       └── views/              # Page components
+│       ├── app/                # Routes (page.tsx wrappers + layout)
+│       ├── views/              # Full-page view components
+│       └── lib/                # ThemeProvider
 ├── packages/
 │   ├── sdk/                    # @traytic/analytics npm package
 │   └── types/                  # Shared TypeScript types
@@ -294,14 +311,16 @@ es.onmessage = (e) => console.log(JSON.parse(e.data))
 
 ## Roadmap
 
-- [x] Dashboard UI — metric cards, timeseries chart, top pages & sources tables, devices & countries breakdowns
-- [x] Landing page, onboarding flow, upgrade & billing success pages
-- [x] Auth — GitHub, Google, email + password (Better Auth)
-- [x] Billing — Paystack (Africa) + Polar (global) with checkout & webhooks
-- [x] Event collection — bot filtering, Web Vitals, custom events
-- [x] Real-time — SSE live visitor count
-- [ ] Wire dashboard to live API (currently mock data)
-- [ ] GeoIP lookup (MaxMind installed, not wired into collect pipeline)
+- [x] SDK — Next.js and React adapters, `< 3 kB`, ESM + CJS, Web Vitals, custom events
+- [x] Event collection — bot filtering, privacy fingerprinting (SHA-256, daily-rotating), Web Vitals
+- [x] Real-time — SSE live visitor count via RxJS stream
+- [x] Auth — email + password, GitHub and Google OAuth, password reset via email (Better Auth)
+- [x] Billing — Paystack (Africa) + Polar (global), checkout and webhooks
+- [x] Dashboard UI — metric cards, timeseries chart, top pages & sources, devices & countries
+- [x] Landing page, onboarding, upgrade, billing success, and password reset pages
+- [ ] Wire dashboard to live API (currently shows mock data)
+- [ ] Dashboard multi-view navigation — realtime, pages, sources tabs
+- [ ] GeoIP — MaxMind installed, not wired into collect pipeline
 - [ ] Goals & funnels (schema exists, needs API + UI)
 - [ ] Alerts — email + Slack (schema exists, needs API + UI)
 - [ ] Live visitor map

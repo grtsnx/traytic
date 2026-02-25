@@ -130,11 +130,6 @@
 	.text-balance {
 		text-wrap: balance;
 	}
-}[data-sonner-toaster] [data-sonner-toast] {
-	height: 3.5rem !important;
-	width: 60% !important;
-	border-radius: 1rem 1rem 1rem 1rem !important;
-	border-color: transparent !important;
 }
 
 :where([data-sonner-toast]) :where([data-icon]) {
