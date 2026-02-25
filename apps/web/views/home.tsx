@@ -96,7 +96,7 @@ const STEPS: Step[] = [
 	{
 		n: "02",
 		title: "Add the tag",
-		desc: "Import the component and drop it anywhere in your layout. No props, no config files, no environment variables.",
+		desc: "Pick your framework, drop in the component. No props, no config files needed.",
 	},
 	{
 		n: "03",
@@ -538,47 +538,77 @@ function MarqueeInstall() {
 	);
 }
 
+const FRAMEWORK_SNIPPETS: { id: string; label: string; icon: React.ReactNode; code: string }[] = [
+	{
+		id: "next",
+		label: "Next.js",
+		icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12c2.54 0 4.894-.79 6.834-2.135L8.56 6.27A.75.75 0 0 1 9.75 5.5h.5v8.06l6.63-8.81A9.96 9.96 0 0 1 22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2a9.96 9.96 0 0 1 6.38 2.287l-.926 1.232A8.46 8.46 0 0 0 12 3.5 8.5 8.5 0 1 0 20.5 12c0-1.8-.56-3.47-1.516-4.846L13.25 15.04V5.5h.5a.75.75 0 0 1 .596 1.21l-1.096 1.456V5.5h.5" /></svg>,
+		code: `import { Analytics } from\n  "@traytic/analytics/next"\n\n// app/layout.tsx\n<Analytics />`,
+	},
+	{
+		id: "react",
+		label: "React",
+		icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="#61DAFB"><path d="M12 10.11c1.03 0 1.87.84 1.87 1.89 0 1-.84 1.85-1.87 1.85S10.13 13 10.13 12c0-1.05.84-1.89 1.87-1.89M7.37 20c.63.38 2.01-.2 3.6-1.7-.52-.59-1.03-1.23-1.51-1.9a22.7 22.7 0 0 1-2.4-.36c-.51 2.14-.32 3.61.31 3.96m.71-5.74-.29-.51c-.11.29-.22.58-.29.86.27.06.57.11.88.16l-.3-.51m6.54-.76.81-1.5-.81-1.5c-.3-.53-.62-1-.91-1.47C13.17 9 12.6 9 12 9s-1.17 0-1.71.03c-.29.47-.61.94-.91 1.47L8.57 12l.81 1.5c.3.53.62 1 .91 1.47.54.03 1.11.03 1.71.03s1.17 0 1.71-.03c.29-.47.61-.94.91-1.47M12 6.78c-.19.22-.39.45-.59.72h1.18c-.2-.27-.4-.5-.59-.72m0 10.44c.19-.22.39-.45.59-.72h-1.18c.2.27.4.5.59.72M16.62 4c-.62-.38-2 .2-3.59 1.7.52.59 1.03 1.23 1.51 1.9.82.08 1.63.2 2.4.36.51-2.14.32-3.61-.32-3.96m-.7 5.74.29.51c.11-.29.22-.58.29-.86-.27-.06-.57-.11-.88-.16l.3.51m1.45-7.05c1.47.84 1.63 3.05 1.01 5.63 2.54.75 4.37 1.99 4.37 3.68s-1.83 2.93-4.37 3.68c.62 2.58.46 4.79-1.01 5.63-1.46.84-3.45-.12-5.37-1.95-1.92 1.83-3.91 2.79-5.38 1.95-1.46-.84-1.62-3.05-1-5.63-2.54-.75-4.37-1.99-4.37-3.68s1.83-2.93 4.37-3.68c-.62-2.58-.46-4.79 1-5.63 1.47-.84 3.46.12 5.38 1.95 1.92-1.83 3.91-2.79 5.37-1.95M17.08 12c.34.75.64 1.5.89 2.26 2.1-.63 3.28-1.53 3.28-2.26s-1.18-1.63-3.28-2.26c-.25.76-.55 1.51-.89 2.26M6.92 12c-.34-.75-.64-1.5-.89-2.26-2.1.63-3.28 1.53-3.28 2.26s1.18 1.63 3.28 2.26c.25-.76.55-1.51.89-2.26m9 2.26-.3.51c.31-.05.61-.1.88-.16-.07-.28-.18-.57-.29-.86l-.29.51m-9.82 1.12c.17.47.37.93.58 1.37.34.08.7.14 1.08.19-.23-.37-.44-.75-.65-1.14l-1.01-.42m1.02-6.76c-.38.05-.74.11-1.08.19-.21.44-.41.9-.58 1.37l1.01-.42c.21-.39.43-.77.65-1.14m7.88 6.76 1.01.42c-.17-.47-.37-.93-.58-1.37-.34-.08-.7-.14-1.08-.19.23.37.44.75.65 1.14M15.9 7.62c.38-.05.74-.11 1.08-.19.21-.44.41-.9.58-1.37l-1.01.42c-.21.39-.43.77-.65 1.14"/></svg>,
+		code: `import { Analytics } from\n  "@traytic/analytics/react"\n\n// App.tsx\n<Analytics />`,
+	},
+	{
+		id: "remix",
+		label: "Remix",
+		icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21.511 18.508c.216 2.773.216 4.073.216 5.492H15.31c0-.309.006-.592.013-.878.018-.711.036-1.441-.014-2.613-.073-1.636-.756-2.007-1.956-2.007H2v-4.327h11.696c1.419 0 2.393-.625 2.393-1.965 0-1.2-.832-1.999-2.393-1.999H2V6h12.46c3.713 0 5.936 2.031 5.936 5.282 0 2.363-1.456 3.901-3.387 4.291 1.713.476 2.393 1.563 2.502 2.935M2 19.51V24H8.168a2.16 2.16 0 0 0-.049-.456c-.112-.654-.452-1.074-1.413-1.074H2v-2.96"/></svg>,
+		code: `import { Analytics } from\n  "@traytic/analytics/remix"\n\n// root.tsx\n<Analytics />`,
+	},
+	{
+		id: "astro",
+		label: "Astro",
+		icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16.074 16.86c-.72.616-2.157 1.035-3.812 1.035-2.032 0-3.735-.632-4.187-1.483-.161.488-.198 1.046-.198 1.402 0 0-.106 1.75 1.111 2.968a1.027 1.027 0 0 1 1.027-1.027c.97 0 .97.846.97 1.026v.104a2.07 2.07 0 0 0 1.131 1.846c-.48-.847-.136-1.846.703-2.072.744-.2 1.504.083 2.19-.403a2.07 2.07 0 0 0 .862-1.684 2.1 2.1 0 0 0-.797-1.712M6.431 4.562l-3.18 9.266a.48.48 0 0 0 .344.614l3.461.866.007.002a23 23 0 0 1 1.163-3.095L10.5 7.03a.344.344 0 0 1 .645 0l2.274 5.185a23 23 0 0 1 1.163 3.095l.007-.002 3.461-.866a.48.48 0 0 0 .344-.614l-3.18-9.266a.534.534 0 0 0-.497-.36H6.928a.534.534 0 0 0-.497.36"/></svg>,
+		code: `---\nimport Analytics from\n  "@traytic/analytics/astro"\n---\n\n<Analytics />`,
+	},
+	{
+		id: "script",
+		label: "Script",
+		icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>,
+		code: `<script\n  defer\n  src="https://cdn.traytic.com\n  /script.js"\n/>`,
+	},
+];
+
 function TypewriterCode() {
-	const text = '// app/layout.tsx\nimport { Analytics }\n  from "@traytic/analytics/next"\n\n<Analytics />';
-	const [count, setCount] = useState(0);
-
-	useEffect(() => {
-		const id = setTimeout(() => {
-			if (count < text.length) {
-				setCount((c) => c + 1);
-			} else {
-				setTimeout(() => setCount(0), 2200);
-			}
-		}, count === 0 ? 600 : 40);
-		return () => clearTimeout(id);
-	}, [count, text.length]);
-
-	const visible = text.slice(0, count);
-	const visibleLines = visible.split("\n");
-	const allLines = text.split("\n");
+	const [active, setActive] = useState(0);
+	const snippet = FRAMEWORK_SNIPPETS[active]!;
 
 	return (
 		<div
-			className="rounded-lg p-4 text-[12px]"
-			style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, fontFamily: C.mono }}>
-			{allLines.map((_line, i) => {
-				const content = visibleLines[i] ?? "";
-				const isLast = i === visibleLines.length - 1 && count < text.length;
-				const lineColor = i === 0 ? C.textMuted : i === allLines.length - 1 ? C.green : C.accentText;
-				return (
-					<div key={i} style={{ color: lineColor, height: 20, lineHeight: "20px", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-						{content}
-						{isLast && (
-							<motion.span
-								className="inline-block w-[6px] h-[14px] ml-px align-middle"
-								style={{ backgroundColor: C.accent }}
-								animate={{ opacity: [1, 0] }}
-								transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
-							/>
-						)}
-					</div>
-				);
-			})}
+			className="rounded-lg overflow-hidden"
+			style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
+			<div className="flex gap-0 overflow-x-auto" style={{ borderBottom: `1px solid ${C.border}` }}>
+				{FRAMEWORK_SNIPPETS.map((fw, i) => (
+					<button
+						key={fw.id}
+						type="button"
+						onClick={() => setActive(i)}
+						className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium shrink-0 transition-colors"
+						style={{
+							fontFamily: C.mono,
+							color: i === active ? C.text : C.textMuted,
+							backgroundColor: i === active ? C.surface : "transparent",
+							borderBottom: i === active ? `2px solid ${C.accent}` : "2px solid transparent",
+						}}>
+						<span className="flex items-center">{fw.icon}</span>
+						{fw.label}
+					</button>
+				))}
+			</div>
+			<AnimatePresence mode="wait">
+				<motion.div
+					key={snippet.id}
+					initial={{ opacity: 0, y: 4 }}
+					animate={{ opacity: 1, y: 0 }}
+					exit={{ opacity: 0, y: -4 }}
+					transition={{ duration: 0.15 }}
+					className="p-4 text-[12px] leading-[20px]"
+					style={{ fontFamily: C.mono, whiteSpace: "pre-wrap", color: C.accentText }}>
+					{snippet.code}
+				</motion.div>
+			</AnimatePresence>
 		</div>
 	);
 }

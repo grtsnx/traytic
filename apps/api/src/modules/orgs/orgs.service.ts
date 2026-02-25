@@ -42,34 +42,39 @@ function sendInvitationEmail(
   inviteUrl: string,
 ) {
   const transport = getTransport();
-  if (!transport) return;
+  if (!transport) {
+    console.warn('[email] RESEND_API_KEY not set — skipping invitation email to', to);
+    return;
+  }
 
   const from = `Traytic <noreply@${process.env.EMAIL_FROM_DOMAIN ?? 'traytic.dev'}>`;
+  console.log(`[email] sending invitation to ${to} from ${from}`);
   transport
     .sendMail({
       from,
       to,
       subject: `You've been invited to ${orgName} on Traytic`,
       html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0d0d14;color:#ededed;border-radius:12px">
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;color:#111;border:1px solid #e5e5e5;border-radius:12px">
         <div style="margin-bottom:24px">
-          <span style="font-size:18px;font-weight:700;letter-spacing:-0.03em">Traytic</span>
+          <span style="font-size:18px;font-weight:700;letter-spacing:-0.03em;color:#111">Traytic</span>
         </div>
-        <h2 style="margin:0 0 12px;font-size:22px;font-weight:800;letter-spacing:-0.03em">Join ${orgName}</h2>
-        <p style="color:#888;margin:0 0 28px;font-size:14px;line-height:1.6">
-          You've been invited to join <strong style="color:#ededed">${orgName}</strong> on Traytic. Click the button below to accept the invitation. This link expires in ${INVITE_EXPIRY_DAYS} days.
+        <h2 style="margin:0 0 12px;font-size:22px;font-weight:800;letter-spacing:-0.03em;color:#111">Join ${orgName}</h2>
+        <p style="color:#555;margin:0 0 28px;font-size:14px;line-height:1.6">
+          You've been invited to join <strong style="color:#111">${orgName}</strong> on Traytic. Click the button below to accept the invitation. This link expires in ${INVITE_EXPIRY_DAYS} days.
         </p>
         <a href="${inviteUrl}"
-           style="display:inline-block;background:#5b6de9;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
+           style="display:inline-block;background:#111;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
           Accept invitation
         </a>
-        <p style="color:#555;font-size:12px;margin:28px 0 0">
+        <p style="color:#999;font-size:12px;margin:28px 0 0">
           If you weren't expecting this invitation, you can safely ignore this email.
         </p>
       </div>
     `,
     })
-    .catch((err) => console.error('[email] invitation failed:', err));
+    .then((info) => console.log(`[email] invitation sent to ${to}:`, info.messageId))
+    .catch((err) => console.error('[email] invitation failed:', err.message ?? err));
 }
 
 @Injectable()

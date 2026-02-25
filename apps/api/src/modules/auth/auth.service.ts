@@ -32,19 +32,19 @@ function sendPasswordResetEmail(to: string, resetUrl: string) {
       to,
       subject: 'Reset your Traytic password',
       html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0d0d14;color:#ededed;border-radius:12px">
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;color:#111;border:1px solid #e5e5e5;border-radius:12px">
         <div style="margin-bottom:24px">
-          <span style="font-size:18px;font-weight:700;letter-spacing:-0.03em">Traytic</span>
+          <span style="font-size:18px;font-weight:700;letter-spacing:-0.03em;color:#111">Traytic</span>
         </div>
-        <h2 style="margin:0 0 12px;font-size:22px;font-weight:800;letter-spacing:-0.03em">Reset your password</h2>
-        <p style="color:#888;margin:0 0 28px;font-size:14px;line-height:1.6">
+        <h2 style="margin:0 0 12px;font-size:22px;font-weight:800;letter-spacing:-0.03em;color:#111">Reset your password</h2>
+        <p style="color:#555;margin:0 0 28px;font-size:14px;line-height:1.6">
           Click the button below to reset your Traytic password. This link expires in 1 hour.
         </p>
         <a href="${resetUrl}"
-           style="display:inline-block;background:#5b6de9;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
+           style="display:inline-block;background:#111;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
           Reset password
         </a>
-        <p style="color:#555;font-size:12px;margin:28px 0 0">
+        <p style="color:#999;font-size:12px;margin:28px 0 0">
           If you didn't request this, you can safely ignore this email.
         </p>
       </div>
