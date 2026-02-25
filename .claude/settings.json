@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(~/.bun/bin/bun x tsc --noEmit -p /Users/grtsnx/programming/nextjs/traytic/packages/sdk/tsconfig.json)",
-      "Bash(~/.bun/bin/bun add @fastify/static --cwd apps/api)"
+      "Bash(~/.bun/bin/bun add @fastify/static --cwd apps/api)",
+      "Bash(~/.bun/bin/bun add @fastify/static@^7.0.0 --cwd apps/api)",
+      "WebFetch(domain:pris.ly)",
+      "WebFetch(domain:www.prisma.io)",
+      "Bash(~/.bun/bin/bun add @prisma/client@latest @prisma/adapter-pg pg --cwd apps/api)",
+      "Bash(~/.bun/bin/bun add -d prisma@latest @types/pg --cwd apps/api)",
+      "Bash(~/.bun/bin/bunx --bun prisma --version)",
+      "Bash(ls /Users/grtsnx/programming/nextjs/traytic/node_modules/.bun/prisma@7.4.1*/node_modules/prisma/build/)",
+      "Bash(find /Users/grtsnx/programming/nextjs/traytic/node_modules/.bun/prisma@7.4.1* -name \"package.json\" -maxdepth 3)",
+      "Bash(xargs -I{} grep -o \"PrismaConfig\\\\|defineConfig\" {})"
     ]
   }
 }

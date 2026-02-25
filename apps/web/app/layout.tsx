@@ -1,33 +1,13 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
-import { Geist_Mono, Public_Sans } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans, Public_Sans } from "next/font/google";
 import { ThemeProvider } from "@/lib";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const acorn = localFont({
-	src: [
-		{
-			path: "../public/fonts/Acorn/Acorn-Regular.otf",
-			weight: "400",
-			style: "normal",
-		},
-		{
-			path: "../public/fonts/Acorn/Acorn-Medium.otf",
-			weight: "500",
-			style: "normal",
-		},
-		{
-			path: "../public/fonts/Acorn/Acorn-SemiBold.otf",
-			weight: "600",
-			style: "normal",
-		},
-		{
-			path: "../public/fonts/Acorn/Acorn-Bold.otf",
-			weight: "700",
-			style: "normal",
-		},
-	],
+// TODO: Replace with Acorn font when .otf files are available in public/fonts/Acorn/
+const acorn = Plus_Jakarta_Sans({
+	subsets: ["latin"] as const,
+	weight: ["400", "500", "600", "700"] as const,
 	variable: "--font-display",
 	display: "swap",
 });

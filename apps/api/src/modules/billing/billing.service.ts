@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../../databases/prisma/prisma.service';
-import { BillingProvider, PlanTier, SubscriptionStatus } from '@prisma/client';
+import { BillingProvider, PlanTier, SubscriptionStatus } from '../../generated/prisma/client';
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 
