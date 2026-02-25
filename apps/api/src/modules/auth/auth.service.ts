@@ -1,26 +1,37 @@
 import { Injectable } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { createTransport } from 'nodemailer';
+import { createTransport, type Transporter } from 'nodemailer';
 import { PrismaService } from '../../databases/prisma/prisma.service';
 
-async function sendPasswordResetEmail(to: string, resetUrl: string) {
+let _transport: Transporter | null = null;
+function getTransport(): Transporter | null {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
+  if (!apiKey) return null;
+  if (!_transport) {
+    _transport = createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: { user: 'resend', pass: apiKey },
+      pool: true,
+      maxConnections: 3,
+    });
+  }
+  return _transport;
+}
+
+function sendPasswordResetEmail(to: string, resetUrl: string) {
+  const transport = getTransport();
+  if (!transport) return;
 
   const from = `Traytic <noreply@${process.env.EMAIL_FROM_DOMAIN ?? 'traytic.dev'}>`;
-  const transport = createTransport({
-    host: 'smtp.resend.com',
-    port: 465,
-    secure: true,
-    auth: { user: 'resend', pass: apiKey },
-  });
-
-  await transport.sendMail({
-    from,
-    to,
-    subject: 'Reset your Traytic password',
-    html: `
+  transport
+    .sendMail({
+      from,
+      to,
+      subject: 'Reset your Traytic password',
+      html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0d0d14;color:#ededed;border-radius:12px">
         <div style="margin-bottom:24px">
           <span style="font-size:18px;font-weight:700;letter-spacing:-0.03em">Traytic</span>
@@ -38,7 +49,8 @@ async function sendPasswordResetEmail(to: string, resetUrl: string) {
         </p>
       </div>
     `,
-  });
+    })
+    .catch((err) => console.error('[email] password reset failed:', err));
 }
 
 function buildSocialProviders() {
@@ -76,8 +88,8 @@ export class AuthService {
       emailAndPassword: {
         enabled: true,
         requireEmailVerification: false,
-        sendResetPassword: async ({ user, url }) => {
-          await sendPasswordResetEmail(user.email, url);
+        sendResetPassword: ({ user, url }) => {
+          sendPasswordResetEmail(user.email, url);
         },
       },
       socialProviders: buildSocialProviders(),

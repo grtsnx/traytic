@@ -913,20 +913,18 @@ function VerifyStep({ site, onComplete }: { site: SiteData; onComplete: () => vo
 
 	const snippetNext = `import { Analytics } from '@traytic/analytics/next'
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html><body>
-      {children}
-      <Analytics siteId="${site.id}" endpoint="${API}/collect" />
-    </body></html>
+    <html lang="en">
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
   )
 }`;
 
-	const snippetScript = `<script
-  defer
-  data-site-id="${site.id}"
-  src="${API}/tracker.js"
-></script>`;
+	const snippetScript = `<script defer src="${API}/tracker.js"></script>`;
 
 	const [tab, setTab] = useState<"next" | "script">("next");
 
@@ -1182,34 +1180,22 @@ export default function Onboarding() {
 						Traytic
 					</span>
 				</Link>
-				<div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-					{step !== "auth" && (
-						<button
-							type="button"
-							onClick={handleLogout}
-							style={{
-								background: "none",
-								border: "none",
-								fontFamily: C.sans,
-								fontSize: "13px",
-								color: C.textMuted,
-								cursor: "pointer",
-								padding: 0,
-							}}>
-							Log out
-						</button>
-					)}
-					<Link
-						href="/"
+				{step !== "auth" && (
+					<button
+						type="button"
+						onClick={handleLogout}
 						style={{
+							background: "none",
+							border: "none",
 							fontFamily: C.sans,
 							fontSize: "13px",
 							color: C.textMuted,
-							textDecoration: "none",
+							cursor: "pointer",
+							padding: 0,
 						}}>
-						← Back
-					</Link>
-				</div>
+						Log out
+					</button>
+				)}
 			</header>
 
 			<div style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>

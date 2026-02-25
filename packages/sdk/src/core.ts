@@ -4,12 +4,11 @@ import type { TractycConfig, TrackOptions } from './types'
 let config: Required<TractycConfig> | null = null
 let initialized = false
 
-export function init(userConfig: TractycConfig) {
+export function init(userConfig: TractycConfig = {}) {
   if (initialized) return
   initialized = true
 
   config = {
-    siteId: userConfig.siteId,
     endpoint: userConfig.endpoint ?? 'https://api.traytic.com/collect',
     respectDnt: userConfig.respectDnt ?? true,
     hashPaths: userConfig.hashPaths ?? false,
@@ -19,13 +18,8 @@ export function init(userConfig: TractycConfig) {
   if (config.disabled) return
   if (config.respectDnt && navigator.doNotTrack === '1') return
 
-  // Track initial page view
   sendPageView()
-
-  // Patch history API for SPA navigation
   patchHistory()
-
-  // Capture Web Vitals
   captureVitals()
 }
 
@@ -61,11 +55,10 @@ function sendEvent(payload: Record<string, unknown>) {
   if (!config) return
 
   const body = JSON.stringify({
-    siteId: config.siteId,
+    domain: location.hostname,
     events: [payload],
   })
 
-  // sendBeacon is non-blocking and works even when page is unloading
   if (navigator.sendBeacon) {
     navigator.sendBeacon(config.endpoint, body)
   } else {

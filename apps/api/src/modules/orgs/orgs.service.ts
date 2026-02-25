@@ -5,11 +5,28 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { createTransport } from 'nodemailer';
+import { createTransport, type Transporter } from 'nodemailer';
 import { PrismaService } from '../../databases/prisma/prisma.service';
 import { OrganizationRole } from '../../generated/prisma/client';
 
 const INVITE_EXPIRY_DAYS = 7;
+
+let _transport: Transporter | null = null;
+function getTransport(): Transporter | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  if (!_transport) {
+    _transport = createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: { user: 'resend', pass: apiKey },
+      pool: true,
+      maxConnections: 3,
+    });
+  }
+  return _transport;
+}
 
 function slugify(name: string): string {
   return name
@@ -19,27 +36,21 @@ function slugify(name: string): string {
     .slice(0, 48);
 }
 
-async function sendInvitationEmail(
+function sendInvitationEmail(
   to: string,
   orgName: string,
   inviteUrl: string,
 ) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
+  const transport = getTransport();
+  if (!transport) return;
 
   const from = `Traytic <noreply@${process.env.EMAIL_FROM_DOMAIN ?? 'traytic.dev'}>`;
-  const transport = createTransport({
-    host: 'smtp.resend.com',
-    port: 465,
-    secure: true,
-    auth: { user: 'resend', pass: apiKey },
-  });
-
-  await transport.sendMail({
-    from,
-    to,
-    subject: `You've been invited to ${orgName} on Traytic`,
-    html: `
+  transport
+    .sendMail({
+      from,
+      to,
+      subject: `You've been invited to ${orgName} on Traytic`,
+      html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0d0d14;color:#ededed;border-radius:12px">
         <div style="margin-bottom:24px">
           <span style="font-size:18px;font-weight:700;letter-spacing:-0.03em">Traytic</span>
@@ -57,7 +68,8 @@ async function sendInvitationEmail(
         </p>
       </div>
     `,
-  });
+    })
+    .catch((err) => console.error('[email] invitation failed:', err));
 }
 
 @Injectable()
@@ -327,7 +339,7 @@ export class OrgsService {
     const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
     const inviteUrl = `${appUrl}/invite?token=${invitation.token}`;
 
-    await sendInvitationEmail(email, org?.name ?? 'an organization', inviteUrl);
+    sendInvitationEmail(email, org?.name ?? 'an organization', inviteUrl);
 
     return { invited: true, email };
   }

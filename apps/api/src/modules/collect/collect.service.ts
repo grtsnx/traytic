@@ -18,10 +18,10 @@ export class CollectService {
     private readonly stream: StreamService,
   ) {}
 
-  async process(dto: CollectDto, rawIp: string, userAgent: string) {
-    // Drop bots
+  async process(dto: CollectDto & { siteId: string }, rawIp: string, userAgent: string) {
     if (BOT_PATTERNS.test(userAgent)) return;
 
+    const siteId = dto.siteId;
     const today = new Date().toISOString().slice(0, 10);
     const ua = new UAParser(userAgent).getResult();
 
@@ -31,19 +31,16 @@ export class CollectService {
     const osVersion = ua.os.version ?? '';
     const deviceType = resolveDevice(ua.device.type);
 
-    // Privacy-safe visitor fingerprint — resets every day (no cookie)
-    const visitorId = hash(`${dto.siteId}:${rawIp}:${userAgent}:${today}`);
-    // Session ID — would normally use a short-lived server-side counter;
-    // here we approximate with hour-of-day granularity
+    const visitorId = hash(`${siteId}:${rawIp}:${userAgent}:${today}`);
     const hour = new Date().toISOString().slice(0, 13);
-    const sessionId = hash(`${dto.siteId}:${rawIp}:${userAgent}:${hour}`);
+    const sessionId = hash(`${siteId}:${rawIp}:${userAgent}:${hour}`);
 
     const rows = dto.events.map((event) => {
       const parsed = new URL(event.url.startsWith('http') ? event.url : `https://x.com${event.url}`);
       const referrerSource = parseReferrerSource(event.referrer ?? '');
 
       return {
-        site_id: dto.siteId,
+        site_id: siteId,
         type: event.type,
         url: event.url,
         path: parsed.pathname,
@@ -84,7 +81,7 @@ export class CollectService {
     // Push to SSE stream for real-time dashboard
     const pageviews = rows.filter((r) => r.type === EventType.PAGEVIEW);
     if (pageviews.length > 0) {
-      this.stream.publish(dto.siteId, {
+      this.stream.publish(siteId, {
         type: 'pageview',
         path: pageviews[0].path,
         country: pageviews[0].country,

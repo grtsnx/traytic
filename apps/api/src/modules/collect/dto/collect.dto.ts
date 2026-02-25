@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsNumber,
   IsObject,
-  IsUrl,
   ValidateNested,
   IsArray,
 } from 'class-validator';
@@ -82,8 +81,13 @@ export class EventDto {
 }
 
 export class CollectDto {
+  @IsOptional()
   @IsString()
-  siteId!: string;
+  siteId?: string;
+
+  @IsOptional()
+  @IsString()
+  domain?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

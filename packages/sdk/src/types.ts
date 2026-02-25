@@ -1,6 +1,4 @@
 export interface TractycConfig {
-  /** Your site ID from the Traytic dashboard */
-  siteId: string
   /** API endpoint. Defaults to https://api.traytic.com/collect */
   endpoint?: string
   /** Respect Do Not Track browser setting. Default: true */

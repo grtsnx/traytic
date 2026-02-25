@@ -134,4 +134,11 @@ export class SitesService {
   async findByApiKey(apiKey: string) {
     return this.prisma.site.findUnique({ where: { apiKey } });
   }
+
+  async findByDomain(domain: string) {
+    const normalized = domain.replace(/^www\./, '').toLowerCase();
+    return this.prisma.site.findFirst({
+      where: { domain: normalized },
+    });
+  }
 }

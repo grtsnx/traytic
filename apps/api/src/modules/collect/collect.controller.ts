@@ -9,17 +9,17 @@ import {
 import { FastifyRequest } from 'fastify';
 import { CollectService } from './collect.service';
 import { CollectDto } from './dto/collect.dto';
+import { SitesService } from '../sites/sites.service';
 
-// ─── Simple in-memory rate limiter: max 200 events/siteId/minute ─────────────
 const RL_MAX = 200;
 const RL_WINDOW_MS = 60_000;
 const rlMap = new Map<string, { n: number; exp: number }>();
 
-function checkRateLimit(siteId: string): boolean {
+function checkRateLimit(key: string): boolean {
   const now = Date.now();
-  const entry = rlMap.get(siteId);
+  const entry = rlMap.get(key);
   if (!entry || now > entry.exp) {
-    rlMap.set(siteId, { n: 1, exp: now + RL_WINDOW_MS });
+    rlMap.set(key, { n: 1, exp: now + RL_WINDOW_MS });
     return true;
   }
   if (entry.n >= RL_MAX) return false;
@@ -27,7 +27,6 @@ function checkRateLimit(siteId: string): boolean {
   return true;
 }
 
-// Clean up expired entries every 5 minutes to avoid unbounded growth
 setInterval(() => {
   const now = Date.now();
   for (const [key, val] of rlMap) {
@@ -37,7 +36,10 @@ setInterval(() => {
 
 @Controller('collect')
 export class CollectController {
-  constructor(private readonly collectService: CollectService) {}
+  constructor(
+    private readonly collectService: CollectService,
+    private readonly sitesService: SitesService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -45,8 +47,17 @@ export class CollectController {
     @Body() body: CollectDto,
     @Req() req: FastifyRequest,
   ): Promise<void> {
-    // Rate limit: silently drop over-limit requests (204 so SDK doesn't retry)
-    if (!checkRateLimit(body.siteId)) return;
+    let siteId = body.siteId;
+
+    if (!siteId && body.domain) {
+      const site = await this.sitesService.findByDomain(body.domain);
+      if (!site) return;
+      siteId = site.id;
+    }
+
+    if (!siteId) return;
+
+    if (!checkRateLimit(siteId)) return;
 
     const ip =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
@@ -54,9 +65,8 @@ export class CollectController {
 
     const userAgent = req.headers['user-agent'] ?? '';
 
-    // Fire-and-forget — respond 204 immediately, process async
-    this.collectService.process(body, ip, userAgent).catch(() => {
-      // silent — never surface collect errors to the SDK
-    });
+    this.collectService
+      .process({ ...body, siteId }, ip, userAgent)
+      .catch(() => {});
   }
 }

@@ -12,8 +12,10 @@ interface AnalyticsProps extends TractycConfig {
 /**
  * React SPA adapter. Works with React Router, TanStack Router, etc.
  *
+ * Set NEXT_PUBLIC_TRAYTIC_SITE_ID and (optionally)
+ * NEXT_PUBLIC_TRAYTIC_ENDPOINT in your env — or pass as props.
+ *
  * @example
- * // App.tsx
  * import { Analytics } from '@traytic/analytics/react'
  * import { useLocation } from 'react-router-dom'
  *
@@ -21,13 +23,13 @@ interface AnalyticsProps extends TractycConfig {
  *   const { pathname } = useLocation()
  *   return (
  *     <>
- *       <Analytics siteId="your_site_id" path={pathname} />
+ *       <Analytics path={pathname} />
  *       <Router />
  *     </>
  *   )
  * }
  */
-export function Analytics({ path, ...config }: AnalyticsProps) {
+export function Analytics({ path, ...config }: AnalyticsProps = {}) {
   const isFirstRender = useRef(true)
 
   useEffect(() => {

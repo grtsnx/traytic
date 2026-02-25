@@ -21,23 +21,27 @@ npm install @traytic/analytics
 ```
 
 ```tsx
-// app/layout.tsx
 import { Analytics } from '@traytic/analytics/next'
 
 export default function RootLayout({ children }) {
   return (
-    <html><body>
-      {children}
-      <Analytics siteId="your-site-id" />
-    </body></html>
+    <html lang="en">
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
   )
 }
 ```
+
+That's it. No site ID, no endpoint, no config. The SDK auto-detects your site by domain.
 
 ---
 
 ## Features
 
+- **Zero-config SDK** — `<Analytics />` and done. Site resolved by domain, endpoint auto-configured
 - **Real-time** — live visitor count (polled every 10 s) + SSE stream from collect pipeline
 - **Privacy-first** — no cookies, no raw IP storage, daily-rotating SHA-256 visitor fingerprint
 - **Web Vitals** — LCP, CLS, INP, TTFB, FCP per route, with p75/p95 and good-rate reporting
@@ -48,6 +52,7 @@ export default function RootLayout({ children }) {
 - **SPA navigation** — automatic `pushState`/`popstate` tracking for single-page apps
 - **Social auth** — GitHub, Google, or email + password (Better Auth)
 - **Team management** — organizations with OWNER / ADMIN / MEMBER roles, email invitations, member CRUD
+- **Guided onboarding** — signup → create org → invite team → add site → verify tracking
 - **Dual billing** — Paystack for Africa (NGN/GHS/KES/ZAR), Polar everywhere else (USD/EUR)
 - **Self-hostable** — `docker compose up` and everything runs
 
@@ -142,6 +147,15 @@ DATABASE_URL=postgresql://traytic:traytic_secret@localhost:5432/traytic
 BETTER_AUTH_SECRET=<random 32-char string — run: openssl rand -hex 32>
 ```
 
+### Email (optional)
+
+```env
+RESEND_API_KEY=re_xxxxxxxxxxxx
+EMAIL_FROM_DOMAIN=yourdomain.com
+```
+
+Sign up at [resend.com](https://resend.com), create an API key, and verify your sending domain. Emails are sent for password resets and team invitations.
+
 ### Social auth (optional)
 
 Create OAuth apps and set the callback URLs below, then fill in the credentials:
@@ -208,7 +222,7 @@ traytic/
 │       └── views/              # Full-page view components
 │           ├── home.tsx        # Landing page
 │           ├── dashboard.tsx   # Analytics dashboard (live API data)
-│           ├── onboarding.tsx  # Auth + first-site setup
+│           ├── onboarding.tsx  # Auth → org → invite → site → verify
 │           ├── team-settings.tsx # Org, members, invitations management
 │           ├── invite.tsx      # Invitation acceptance flow
 │           ├── upgrade.tsx     # Plan upgrade + billing
@@ -219,6 +233,7 @@ traytic/
 │   ├── sdk/                    # @traytic/analytics npm package
 │   │   └── src/
 │   │       ├── core.ts         # init, track, trackPageView, vitals, SPA patching
+│   │       ├── types.ts        # TractycConfig, TrackOptions
 │   │       └── adapters/       # next.tsx, react.tsx
 │   └── types/                  # Shared TypeScript types
 └── docker-compose.yml
@@ -230,7 +245,8 @@ traytic/
 
 ```
 User's browser (SDK)
-  └── POST /collect
+  └── POST /collect  { domain: "mysite.com", events: [...] }
+        ├── resolve site by domain (Prisma lookup)
         ├── drop bots (UA regex)
         ├── parse UA → browser, OS, device type
         ├── parse referrer → known source or raw hostname
@@ -249,7 +265,7 @@ User's browser (SDK)
 ```tsx
 import { Analytics } from '@traytic/analytics/next'
 
-<Analytics siteId="your-site-id" />
+<Analytics />
 ```
 
 ### React (other frameworks)
@@ -257,7 +273,7 @@ import { Analytics } from '@traytic/analytics/next'
 ```tsx
 import { Analytics } from '@traytic/analytics/react'
 
-<Analytics siteId="your-site-id" />
+<Analytics />
 ```
 
 ### Custom events
@@ -269,17 +285,18 @@ track('signup', { plan: 'pro' })
 track('purchase', { value: '49.99' })
 ```
 
-### Self-hosted endpoint
+### Script tag
 
-```tsx
-<Analytics siteId="your-site-id" endpoint="https://api.yourdomain.com/collect" />
+```html
+<script defer src="https://api.traytic.com/tracker.js"></script>
 ```
 
 ### Configuration options
 
+All props are optional. The SDK auto-detects your site by `window.location.hostname`.
+
 | Option | Default | Description |
 |---|---|---|
-| `siteId` | — | Required. Your site identifier |
 | `endpoint` | `https://api.traytic.com/collect` | Collection endpoint |
 | `respectDnt` | `true` | Honour the browser Do Not Track flag |
 | `hashPaths` | `false` | Hash path segments for extra privacy |
@@ -310,10 +327,12 @@ APP_URL=https://yourdomain.com
 
 ```
 POST /collect
-{ "siteId": "...", "events": [{ "type": "pageview", "url": "...", "referrer": "..." }] }
+{ "domain": "mysite.com", "events": [{ "type": "pageview", "url": "...", "referrer": "..." }] }
 ```
 
-Returns `204`. Processing is async.
+Returns `204`. Site is resolved by domain. Processing is async.
+
+Legacy `siteId` field is still supported for backward compatibility.
 
 ### Stats (authenticated)
 
@@ -340,20 +359,20 @@ es.onmessage = (e) => console.log(JSON.parse(e.data))
 ### Organizations (authenticated)
 
 ```
-GET    /orgs                              # list your orgs
-POST   /orgs                              # create org
-PATCH  /orgs/:orgId                       # update name / slug
-DELETE /orgs/:orgId                       # delete org (owner only)
-POST   /orgs/:orgId/leave                 # leave org
+GET    /api/orgs                              # list your orgs
+POST   /api/orgs                              # create org
+PATCH  /api/orgs/:orgId                       # update name / slug
+DELETE /api/orgs/:orgId                       # delete org (owner only)
+POST   /api/orgs/:orgId/leave                 # leave org
 
-GET    /orgs/:orgId/members               # list members
-PATCH  /orgs/:orgId/members/:memberId     # change role
-DELETE /orgs/:orgId/members/:memberId     # remove member
+GET    /api/orgs/:orgId/members               # list members
+PATCH  /api/orgs/:orgId/members/:memberId     # change role
+DELETE /api/orgs/:orgId/members/:memberId     # remove member
 
-POST   /orgs/:orgId/invitations           # invite by email
-GET    /orgs/:orgId/invitations           # list pending invitations
-DELETE /orgs/:orgId/invitations/:id       # revoke invitation
-POST   /orgs/invitations/accept           # accept invitation (token)
+POST   /api/orgs/:orgId/invitations           # invite by email
+GET    /api/orgs/:orgId/invitations           # list pending invitations
+DELETE /api/orgs/:orgId/invitations/:id       # revoke invitation
+POST   /api/orgs/invitations/accept           # accept invitation (token)
 ```
 
 ### Billing
@@ -370,15 +389,18 @@ POST /api/billing/webhooks/polar          # Polar webhook
 
 ## Roadmap
 
-- [x] SDK — Next.js and React adapters, `< 3 kB`, ESM + CJS, Web Vitals, custom events, UTM capture, SPA navigation
+- [x] SDK — zero-config Next.js and React adapters, `< 3 kB`, ESM + CJS, Web Vitals, custom events, UTM capture, SPA navigation
+- [x] Domain-based site resolution — no site ID needed, SDK sends hostname, API resolves automatically
 - [x] Event collection — bot filtering, privacy fingerprinting (SHA-256, daily-rotating), referrer parsing, Web Vitals
 - [x] Real-time — SSE stream from collect pipeline + polled live visitor count
 - [x] Auth — email + password, GitHub and Google OAuth, password reset via email (Better Auth)
+- [x] Email — Resend SMTP for password resets and team invitations
 - [x] Billing — Paystack (Africa) + Polar (global), checkout, webhooks, subscription management
 - [x] Dashboard — metric cards, timeseries chart, top pages & sources, devices & countries — wired to live ClickHouse API
-- [x] Dashboard navigation — sidebar with overview, realtime, pages, sources, devices, goals tabs + site selector
+- [x] Site management — site selector, add site, delete site with confirmation
 - [x] Team management — organizations (CRUD), members with role-based access (OWNER/ADMIN/MEMBER), email invitations with accept/revoke flow
-- [x] Landing page, onboarding, upgrade, billing success, and password reset pages
+- [x] Onboarding flow — signup → create org → invite team (or skip) → add site → verify tracking
+- [x] Landing page, upgrade, billing success, and password reset pages
 - [x] Terms of service and privacy policy pages
 - [ ] Dashboard sub-views — dedicated realtime, pages, sources, devices, goals panels (sidebar nav exists, needs per-tab content)
 - [ ] GeoIP — country/region/city enrichment in collect pipeline (ClickHouse columns exist, not wired yet)
@@ -389,7 +411,6 @@ POST /api/billing/webhooks/polar          # Polar webhook
 - [ ] Astro, Vue, Svelte SDK adapters
 - [ ] CLI — `bunx traytic dev`
 - [ ] Public/shared dashboards (Site model has `public` flag, not yet exposed)
-- [ ] Email delivery for invitations (currently link-based, no transactional email)
 
 ---
 

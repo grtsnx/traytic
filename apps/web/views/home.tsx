@@ -53,7 +53,7 @@ const PLANS: Plan[] = [
 		price: "0",
 		priceNGN: "0",
 		period: "forever",
-		desc: "Zero dollars, zero catches. One site, full analytics. Your accountant will be confused.",
+		desc: "Everything you need to understand your traffic. One site, full dashboard, zero catches.",
 		features: ["1 site", "50,000 events / month", "Real-time dashboard", "6-month data retention", "Community support"],
 		siteLimit: "1 site",
 		cta: "Get started free",
@@ -65,7 +65,7 @@ const PLANS: Plan[] = [
 		price: "5",
 		priceNGN: "7,900",
 		period: "/ month",
-		desc: "More sites, more data. We handle infra so you don't have to wake up at 3 AM.",
+		desc: "For growing products. More sites, longer retention, and we handle the infrastructure.",
 		features: ["Up to 10 sites", "1M events / month", "1-year data retention", "Email & Slack alerts", "Priority support"],
 		siteLimit: "Up to 10 sites",
 		cta: "Start free trial",
@@ -77,7 +77,7 @@ const PLANS: Plan[] = [
 		price: "19",
 		priceNGN: "29,900",
 		period: "/ month",
-		desc: "For teams that need scale. Unlimited everything, because limits are for consent banners.",
+		desc: "For teams that need scale. Unlimited sites, team seats, and advanced features.",
 		features: ["Unlimited sites", "10M events / month", "Everything in Pro", "Unlimited team seats", "Custom goals & funnels"],
 		siteLimit: "Unlimited sites",
 		cta: "Start free trial",
@@ -86,75 +86,31 @@ const PLANS: Plan[] = [
 	},
 ];
 
-type Step = { n: string; title: string; desc: string; code: string | null };
+type Step = { n: string; title: string; desc: string };
 const STEPS: Step[] = [
 	{
 		n: "01",
-		title: "Install the SDK",
-		desc: "One command. Sub-3kb gzipped. Smaller than most favicons. Works with npm, yarn, pnpm, or bun.",
-		code: "npm install @traytic/analytics",
+		title: "Install the package",
+		desc: "Grab the SDK or use the CLI to scaffold everything. Works with npm, yarn, pnpm, or bun.",
 	},
 	{
 		n: "02",
-		title: "Add to your layout",
-		desc: "Drop the component into your root layout. Configure your site ID. That's it. No, really. That's it.",
-		code: `import { Analytics } from '@traytic/analytics/next'
-
-export default function RootLayout({ children }) {
-  return (
-    <html><body>
-      {children}
-      <Analytics
-        siteId="YOUR_SITE_ID"
-        endpoint="https://your-api.example.com/collect"
-      />
-    </body></html>
-  )
-}`,
+		title: "Add the tag",
+		desc: "Import the component and drop it anywhere in your layout. No props, no config files, no environment variables.",
 	},
 	{
 		n: "03",
-		title: "See it live",
-		desc: "Open the dashboard. Real-time data streams in the moment your first visitor lands. Go on, refresh the page.",
-		code: null,
-	},
-];
-
-type Feature = { icon: string; title: string; desc: string; tag: string };
-const FEATURES: Feature[] = [
-	{
-		icon: "⬡",
-		title: "No cookies. No consent banners.",
-		desc: "Privacy fingerprinting via SHA-256 hash of site ID, IP, user-agent, and date. Your lawyers can finally take a vacation. Fully GDPR, CCPA, and PECR compliant.",
-		tag: "Privacy-first",
-	},
-	{
-		icon: "◎",
-		title: "Real-time, sub-second updates.",
-		desc: "SSE-powered live dashboard via RxJS. See every pageview the moment it happens — no polling, no delay, no \"data will be available in 24 hours.\"",
-		tag: "Real-time",
-	},
-	{
-		icon: "▣",
-		title: "Self-hostable in one command.",
-		desc: "Run on your own infra with Docker. Postgres + ClickHouse + Redis. MIT licensed. Your data stays where you put it.",
-		tag: "Self-hostable",
-	},
-	{
-		icon: "◈",
-		title: "Open source, forever.",
-		desc: "Every line of code is public on GitHub. Audit it, fork it, contribute to it. We have nothing to hide (unlike your current analytics provider).",
-		tag: "Open source",
+		title: "Ship and watch",
+		desc: "Deploy your app and open the dashboard. Pageviews, referrers, devices, and countries — all in real-time.",
 	},
 ];
 
 const NAV_LINKS: Array<{ label: string; href: string }> = [
-	{ label: "Features", href: "#features" },
 	{ label: "How it works", href: "#how-it-works" },
 	{ label: "Pricing", href: "#pricing" },
 ];
 
-const PROOF_ITEMS: string[] = ["No cookies", "GDPR compliant", "Self-hostable", "<3kb SDK"];
+const PROOF_ITEMS: string[] = ["Zero-config", "GDPR compliant", "Self-hostable"];
 const FOOTER_LINKS: Array<{ label: string; href: string; external?: boolean }> = [
 	{ label: "Docs", href: "#how-it-works" },
 	{ label: "GitHub", href: "https://github.com/traytic/traytic", external: true },
@@ -451,7 +407,7 @@ function Hero({ session }: { session: SessionState }) {
 						fontFamily: C.mono,
 					}}>
 					<YCIcon size={18} />
-					Not backed by YC. Open source.
+					Not backed by YC — just open source.
 				</motion.div>
 
 				<motion.h1
@@ -460,9 +416,9 @@ function Hero({ session }: { session: SessionState }) {
 					transition={{ duration: 0.5, delay: 0.08, ease: [0.25, 0.1, 0.25, 1] }}
 					className="text-[34px] sm:text-[48px] md:text-[60px] font-bold leading-[1.08] tracking-tight mb-5"
 					style={{ color: C.text, fontFamily: C.display }}>
-					Analytics that respect
-					<br />
-					<span style={{ color: C.accent }}>your users&apos; privacy.</span>
+				Analytics that
+				<br />
+				<span style={{ color: C.accent }}>just works.</span>
 				</motion.h1>
 
 				<motion.p
@@ -471,8 +427,7 @@ function Hero({ session }: { session: SessionState }) {
 					transition={{ duration: 0.5, delay: 0.16, ease: [0.25, 0.1, 0.25, 1] }}
 					className="text-[17px] leading-relaxed mb-10 max-w-xl mx-auto"
 					style={{ color: C.textMuted, fontFamily: C.sans }}>
-				Privacy-first, real-time web analytics. No cookies, no consent banners, no creepy tracking scripts following your users around the internet.
-				Self-hostable and open source.
+				One import. No cookies. No config.
 				</motion.p>
 
 				<motion.div
@@ -520,119 +475,207 @@ function Hero({ session }: { session: SessionState }) {
 	);
 }
 
-// ── Features ───────────────────────────────────────────────────────────────────
-function Features() {
-	return (
-		<section id="features" className="py-20 px-6" style={{ borderTop: `1px solid ${C.border}` }}>
-			<div className="max-w-5xl mx-auto">
-				<FadeIn className="mb-12 text-center">
-					<p className="text-[11px] font-medium tracking-widest uppercase mb-3" style={{ color: C.accentText, fontFamily: C.mono }}>
-						Features
-					</p>
-					<h2 className="text-[32px] font-bold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
-						Everything you need. Nothing you don&apos;t.
-					</h2>
-				</FadeIn>
+// ── Step visuals ──────────────────────────────────────────────────────────────
 
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-					{FEATURES.map((f: Feature, i: number) => (
-						<FadeIn key={f.title} delay={i * 0.07}>
-							<div
-								className="p-6 rounded-xl h-full transition-colors hover:border-white/20"
-								style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}>
-								<div className="flex items-start gap-4">
-									<span className="text-[22px] mt-0.5 shrink-0" style={{ color: C.accent, fontFamily: C.mono }}>
-										{f.icon}
-									</span>
-									<div>
-										<h3 className="text-[15px] font-semibold mb-2" style={{ color: C.text, fontFamily: C.display }}>
-											{f.title}
-										</h3>
-										<p className="text-[13px] leading-relaxed" style={{ color: C.textMuted, fontFamily: C.sans }}>
-											{f.desc}
-										</p>
-										<span
-											className="inline-block mt-3 text-[10px] font-medium px-2 py-0.5 rounded-full tracking-widest uppercase"
-											style={{
-												backgroundColor: C.accentBg,
-												color: C.accentText,
-												border: `1px solid ${C.accentBorder}`,
-												fontFamily: C.mono,
-											}}>
-											{f.tag}
-										</span>
-									</div>
-								</div>
-							</div>
-						</FadeIn>
-					))}
+const PKG_ICONS: Record<string, React.ReactNode> = {
+	npm: (
+		<svg width="16" height="16" viewBox="0 0 256 256"><rect width="256" height="256" fill="#C12127" /><path d="M48 48v160h80V88h40v120h40V48H48z" fill="#fff" /></svg>
+	),
+	yarn: (
+		<svg width="16" height="16" viewBox="0 0 256 256"><rect width="256" height="256" rx="40" fill="#2C8EBB" /><path d="M203 170c-6-3-12-4-17-4-4 0-13 3-23 7-12 4-25 8-33 8-2 0-4 0-6-1l-3-1-3 1c-2 1-8 2-13 2-10 0-16-3-19-6-1-1-2-3-2-5 0 0 1-2 2-4l4-6c3-4 6-9 7-14 1-3 0-6-2-9-5-7-8-15-9-21 0-3 1-9 5-16 4-6 12-14 27-18 0 0 1 0 1 0 1 0 3-1 3-3 0-2-1-3-3-4-11-3-15-11-14-18 1-5 5-9 9-11 5-2 10-2 13 0 4 3 6 7 5 13 0 2 1 3 3 4 2 0 3-1 4-3 1-10-4-18-12-22-6-4-14-4-21-1-6 2-11 7-13 13-2 8 2 18 14 23-14 5-23 13-28 21-5 7-7 14-7 20 1 8 5 17 10 25 1 1 1 3 1 4-1 4-4 8-7 13l-4 6c-2 3-3 6-3 9 1 6 4 10 8 13 5 4 12 6 21 6 5 0 11-1 14-2l1 0c2 1 4 1 6 1 9 0 23-5 34-9 10-3 18-6 22-6 4 0 9 1 14 3 2 1 4 0 5-2 1-2 0-4-2-5z" fill="#fff" /></svg>
+	),
+	pnpm: (
+		<svg width="16" height="16" viewBox="0 0 256 256"><rect width="256" height="256" fill="#F9AD00" /><rect x="16" y="16" width="68" height="68" fill="#4E4E4E" /><rect x="94" y="16" width="68" height="68" fill="#4E4E4E" /><rect x="172" y="16" width="68" height="68" fill="#4E4E4E" /><rect x="172" y="94" width="68" height="68" fill="#4E4E4E" /><rect x="94" y="94" width="68" height="68" fill="#4E4E4E" /><rect x="172" y="172" width="68" height="68" fill="#4E4E4E" /><rect x="94" y="172" width="68" height="68" fill="#4E4E4E" /></svg>
+	),
+	bun: (
+		<svg width="16" height="16" viewBox="0 0 256 256"><rect width="256" height="256" rx="40" fill="#FBF0DF" /><ellipse cx="128" cy="155" rx="80" ry="65" fill="#FBF0DF" stroke="#3B2314" strokeWidth="8" /><ellipse cx="128" cy="164" rx="56" ry="28" fill="#F9D89C" /><circle cx="105" cy="140" r="6" fill="#3B2314" /><circle cx="151" cy="140" r="6" fill="#3B2314" /><circle cx="103" cy="138" r="2" fill="#fff" /><circle cx="149" cy="138" r="2" fill="#fff" /><ellipse cx="128" cy="154" rx="5" ry="3" fill="#E8847C" /><path d="M108 86c-8-30 6-52 6-52s10 18 4 46" fill="#87A96B" /><path d="M128 80c0-32 14-50 14-50s6 20-4 48" fill="#87A96B" /><path d="M148 86c8-30-2-52-2-52s-8 18-6 46" fill="#87A96B" /></svg>
+	),
+	cli: (
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="3" stroke={C.accentText} strokeWidth="1.5" /><path d="M7 9l3 3-3 3" stroke={C.accentText} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M13 15h4" stroke={C.accentText} strokeWidth="1.5" strokeLinecap="round" /></svg>
+	),
+};
+
+function MarqueeInstall() {
+	const cmds = [
+		{ mgr: "npm", cmd: "npm install @traytic/analytics" },
+		{ mgr: "yarn", cmd: "yarn add @traytic/analytics" },
+		{ mgr: "pnpm", cmd: "pnpm add @traytic/analytics" },
+		{ mgr: "bun", cmd: "bun add @traytic/analytics" },
+		{ mgr: "cli", cmd: "npx traytic init" },
+	];
+	const doubled = [...cmds, ...cmds];
+	return (
+		<div
+			className="rounded-lg overflow-hidden relative"
+			style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, height: 140 }}>
+			<div
+				className="absolute inset-x-0 top-0 h-6 z-10 pointer-events-none"
+				style={{ background: `linear-gradient(to bottom, ${C.bg}, transparent)` }}
+			/>
+			<div
+				className="absolute inset-x-0 bottom-0 h-6 z-10 pointer-events-none"
+				style={{ background: `linear-gradient(to top, ${C.bg}, transparent)` }}
+			/>
+			<motion.div
+				className="flex flex-col gap-2.5 px-3 py-2"
+				animate={{ y: [0, -(cmds.length * 40)] }}
+				transition={{ duration: 12, repeat: Infinity, ease: "linear" }}>
+				{doubled.map((c, i) => (
+					<div
+						key={`${c.mgr}-${i}`}
+						className="flex items-center gap-3 rounded-md px-2.5 py-2 shrink-0"
+						style={{ height: 32, fontFamily: C.mono, fontSize: 11 }}>
+						<span className="shrink-0 flex items-center">{PKG_ICONS[c.mgr]}</span>
+						<span style={{ color: C.accentText }}>{c.cmd}</span>
+					</div>
+				))}
+			</motion.div>
+		</div>
+	);
+}
+
+function TypewriterCode() {
+	const text = '// app/layout.tsx\nimport { Analytics }\n  from "@traytic/analytics/next"\n\n<Analytics />';
+	const [count, setCount] = useState(0);
+
+	useEffect(() => {
+		const id = setTimeout(() => {
+			if (count < text.length) {
+				setCount((c) => c + 1);
+			} else {
+				setTimeout(() => setCount(0), 2200);
+			}
+		}, count === 0 ? 600 : 40);
+		return () => clearTimeout(id);
+	}, [count, text.length]);
+
+	const visible = text.slice(0, count);
+	const visibleLines = visible.split("\n");
+	const allLines = text.split("\n");
+
+	return (
+		<div
+			className="rounded-lg p-4 text-[12px]"
+			style={{ backgroundColor: C.bg, border: `1px solid ${C.border}`, fontFamily: C.mono }}>
+			{allLines.map((_line, i) => {
+				const content = visibleLines[i] ?? "";
+				const isLast = i === visibleLines.length - 1 && count < text.length;
+				const lineColor = i === 0 ? C.textMuted : i === allLines.length - 1 ? C.green : C.accentText;
+				return (
+					<div key={i} style={{ color: lineColor, height: 20, lineHeight: "20px", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+						{content}
+						{isLast && (
+							<motion.span
+								className="inline-block w-[6px] h-[14px] ml-px align-middle"
+								style={{ backgroundColor: C.accent }}
+								animate={{ opacity: [1, 0] }}
+								transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
+							/>
+						)}
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+function AnimatedDashboard() {
+	const bars = [28, 42, 36, 55, 48, 62, 45, 70, 58, 50, 40, 65];
+	return (
+		<div
+			className="rounded-lg overflow-hidden"
+			style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
+			<div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: `1px solid ${C.border}` }}>
+				<div className="flex gap-1.5">
+					<span className="w-[7px] h-[7px] rounded-full" style={{ backgroundColor: "oklch(0.65 0.2 25)" }} />
+					<span className="w-[7px] h-[7px] rounded-full" style={{ backgroundColor: "oklch(0.75 0.16 85)" }} />
+					<span className="w-[7px] h-[7px] rounded-full" style={{ backgroundColor: C.green }} />
+				</div>
+				<span className="text-[9px] ml-1" style={{ color: C.textMuted, fontFamily: C.mono }}>traytic — dashboard</span>
+			</div>
+
+			<div className="grid grid-cols-3 gap-px px-3 pt-2.5 pb-1.5">
+				{[
+					{ label: "Visitors", value: "2,847" },
+					{ label: "Pageviews", value: "8,421" },
+					{ label: "Bounce", value: "34%" },
+				].map((m) => (
+					<div key={m.label} className="text-center">
+						<p className="text-[7px] uppercase tracking-wider" style={{ color: C.textMuted, fontFamily: C.mono }}>{m.label}</p>
+						<p className="text-[13px] font-bold" style={{ color: C.text, fontFamily: C.display }}>{m.value}</p>
+					</div>
+				))}
+			</div>
+
+			<div className="px-3 pb-1.5">
+				<div className="flex items-end gap-[3px]" style={{ height: 56 }}>
+					{bars.map((h, i) => {
+						const h2 = bars[(i + 4) % bars.length]!;
+						return (
+							<motion.div
+								key={i}
+								className="flex-1 rounded-sm"
+								style={{ backgroundColor: C.accent }}
+								animate={{
+									height: [`${h}%`, `${h2}%`, `${h}%`],
+									opacity: [0.5 + h / 140, 0.5 + h2 / 140, 0.5 + h / 140],
+								}}
+								transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: i * 0.12 }}
+							/>
+						);
+					})}
 				</div>
 			</div>
-		</section>
+
+			<div className="flex items-center gap-2 px-3 pb-2">
+				<motion.span
+					className="w-[6px] h-[6px] rounded-full"
+					style={{ backgroundColor: C.green }}
+					animate={{ boxShadow: [`0 0 4px ${C.green}`, `0 0 10px ${C.green}`, `0 0 4px ${C.green}`] }}
+					transition={{ duration: 2, repeat: Infinity }}
+				/>
+				<span className="text-[9px]" style={{ color: C.green, fontFamily: C.mono }}>12 online now</span>
+			</div>
+		</div>
 	);
 }
 
 // ── How it works ───────────────────────────────────────────────────────────────
 function HowItWorks() {
 	return (
-		<section id="how-it-works" className="py-20 px-6" style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.surface }}>
+		<section id="how-it-works" className="py-20 px-6" style={{ backgroundColor: C.surface }}>
 			<div className="max-w-5xl mx-auto">
 				<FadeIn className="mb-12 text-center">
 					<p className="text-[11px] font-medium tracking-widest uppercase mb-3" style={{ color: C.accentText, fontFamily: C.mono }}>
 						How it works
 					</p>
 					<h2 className="text-[32px] font-bold tracking-tight" style={{ color: C.text, fontFamily: C.display }}>
-						From zero to live in 3 steps.
+						Three steps. Two minutes. Done.
 					</h2>
 				</FadeIn>
 
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-					{STEPS.map((step: Step, i: number) => (
-						<FadeIn key={step.n} delay={i * 0.1}>
-							<div className="flex flex-col gap-4">
-								<div className="flex items-center gap-3">
-									<span className="text-[13px] font-bold tabular-nums" style={{ color: C.accent, fontFamily: C.mono }}>
-										{step.n}
-									</span>
-									<div className="h-px flex-1" style={{ backgroundColor: C.border }} />
-								</div>
-
-								<h3 className="text-[16px] font-semibold" style={{ color: C.text, fontFamily: C.display }}>
-									{step.title}
-								</h3>
-								<p className="text-[13px] leading-relaxed" style={{ color: C.textMuted, fontFamily: C.sans }}>
-									{step.desc}
-								</p>
-
-								{step.code ? (
-									<div
-										className="rounded-lg p-4 text-[12px] leading-relaxed overflow-x-auto"
-										style={{
-											backgroundColor: C.bg,
-											border: `1px solid ${C.border}`,
-											color: C.accentText,
-											fontFamily: C.mono,
-											whiteSpace: "pre",
-										}}>
-										{step.code}
-									</div>
-								) : (
-									<div
-										className="rounded-lg p-4 flex items-center gap-3"
-										style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
-										<span
-											className="w-2.5 h-2.5 rounded-full shrink-0"
-											style={{ backgroundColor: C.green, boxShadow: `0 0 8px ${C.green}` }}
-										/>
-										<span className="text-[13px]" style={{ color: C.green, fontFamily: C.mono }}>
-											Live — data streaming in real-time
-										</span>
-									</div>
-								)}
-							</div>
-						</FadeIn>
-					))}
-				</div>
+		<div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+			{STEPS.map((step: Step, i: number) => (
+				<FadeIn key={step.n} delay={i * 0.1} className="flex">
+					<div className="flex flex-col gap-4 flex-1">
+						<span className="text-[13px] font-bold tabular-nums" style={{ color: C.accent, fontFamily: C.mono }}>
+							{step.n}
+						</span>
+						<h3 className="text-[16px] font-semibold" style={{ color: C.text, fontFamily: C.display }}>
+							{step.title}
+						</h3>
+						<p className="text-[13px] leading-relaxed" style={{ color: C.textMuted, fontFamily: C.sans }}>
+							{step.desc}
+						</p>
+						<div className="mt-auto">
+							{step.n === "01" && <MarqueeInstall />}
+							{step.n === "02" && <TypewriterCode />}
+							{step.n === "03" && <AnimatedDashboard />}
+						</div>
+					</div>
+				</FadeIn>
+			))}
+		</div>
 			</div>
 		</section>
 	);
@@ -641,7 +684,7 @@ function HowItWorks() {
 // ── Pricing ────────────────────────────────────────────────────────────────────
 function Pricing({ session }: { session: SessionState }) {
 	return (
-		<section id="pricing" className="py-20 px-6" style={{ borderTop: `1px solid ${C.border}` }}>
+		<section id="pricing" className="py-20 px-6">
 			<div className="max-w-5xl mx-auto">
 				<FadeIn className="mb-12 text-center">
 					<p className="text-[11px] font-medium tracking-widest uppercase mb-3" style={{ color: C.accentText, fontFamily: C.mono }}>
@@ -651,7 +694,7 @@ function Pricing({ session }: { session: SessionState }) {
 						Simple, honest pricing.
 					</h2>
 					<p className="text-[14px]" style={{ color: C.textMuted, fontFamily: C.sans }}>
-						Start free with 1 site. Add more when you&apos;re ready — from $5/mo.
+						Free forever for 1 site. Scale when you need to — no surprises.
 					</p>
 				</FadeIn>
 
@@ -735,7 +778,7 @@ function Pricing({ session }: { session: SessionState }) {
 
 				<FadeIn delay={0.3}>
 					<p className="mt-6 text-center text-[12px]" style={{ color: C.textMuted, fontFamily: C.mono }}>
-						NGN/GHS/KES/ZAR pricing via Paystack for NG · GH · KE · ZA markets.
+						NGN/GHS/KES/ZAR pricing via Paystack.
 					</p>
 				</FadeIn>
 			</div>
@@ -748,22 +791,22 @@ function CTABanner({ session }: { session: SessionState }) {
 	return (
 		<section
 			className="py-20 px-6 text-center"
-			style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.surface }}>
+			style={{ backgroundColor: C.surface }}>
 			<div className="max-w-2xl mx-auto">
 				<FadeIn>
 					<h2 className="text-[26px] sm:text-[36px] font-bold tracking-tight mb-4" style={{ color: C.text, fontFamily: C.display }}>
-						Ready to drop the consent banner?
+						Ready when you are.
 					</h2>
 					<p className="text-[15px] mb-8" style={{ color: C.textMuted, fontFamily: C.sans }}>
-						Start tracking in minutes. Free plan — 1 site, 50K events, no credit card. Your users will thank you. Silently. Because we don&apos;t track that.
+						Install the SDK, add the tag, and your analytics is live.
 					</p>
 					<div className="flex flex-wrap items-center justify-center gap-3">
 						<Link
 							href={session.loggedIn ? session.ctaHref : "/onboarding"}
 							className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 							style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
-					{session.loggedIn ? session.ctaLabel : "Get started free →"}
-				</Link>
+							{session.loggedIn ? session.ctaLabel : "Get started free →"}
+						</Link>
 						<a
 							href="https://github.com/traytic/traytic"
 							target="_blank"
@@ -821,10 +864,7 @@ function Footer() {
 				)}
 			</div>
 
-				<p className="text-[11px]" style={{ color: C.textMuted, fontFamily: C.mono }}>
-					MIT license · © 2026 Traytic
-				</p>
-				<SponsorButton variant="footer" />
+							<SponsorButton variant="footer" />
 			</div>
 		</footer>
 	);
@@ -850,7 +890,7 @@ export default function Home() {
 				const authData = (await authRes.json()) as { user?: { id: string } } | null;
 				if (!authData?.user) return;
 
-				const sitesRes = await fetch(`${API}/sites`, { credentials: "include" });
+				const sitesRes = await fetch(`${API}/api/sites`, { credentials: "include" });
 				const sites = sitesRes.ok ? ((await sitesRes.json()) as { id: string }[]) : [];
 
 				if (sites.length > 0) {
@@ -881,7 +921,6 @@ export default function Home() {
 			<Nav session={session} />
 			<main>
 				<Hero session={session} />
-				<Features />
 				<HowItWorks />
 				<Pricing session={session} />
 				<CTABanner session={session} />
