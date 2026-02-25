@@ -18,7 +18,7 @@ By participating, you agree to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
 1. **Fork and clone**
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/traytic.git
+   git clone https://github.com/traytic/traytic.git
    cd traytic
    ```
 

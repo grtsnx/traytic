@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" role="img" aria-label="Traytic icon">
+  <defs>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#iconGrad)" d="M8 6h6v4h2V6h6v18h-6v-6h-2v6H8V6Z"/>
+  <path stroke="url(#iconGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M24 26l2-4 2 2 3-5 3 3" fill="none"/>
+</svg>

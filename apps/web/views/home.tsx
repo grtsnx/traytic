@@ -32,6 +32,7 @@ type Plan = {
 	features: string[];
 	siteLimit: string;
 	cta: string;
+	ctaHref: string;
 	highlight: boolean;
 };
 
@@ -45,6 +46,7 @@ const PLANS: Plan[] = [
 		features: ["1 site", "50,000 events / month", "Real-time dashboard", "6-month data retention", "Community support"],
 		siteLimit: "1 site",
 		cta: "Get started free",
+		ctaHref: "/onboarding",
 		highlight: false,
 	},
 	{
@@ -56,6 +58,7 @@ const PLANS: Plan[] = [
 		features: ["Up to 10 sites", "1M events / month", "1-year data retention", "Email & Slack alerts", "Priority support"],
 		siteLimit: "Up to 10 sites",
 		cta: "Start free trial",
+		ctaHref: "/upgrade?plan=pro",
 		highlight: true,
 	},
 	{
@@ -67,6 +70,7 @@ const PLANS: Plan[] = [
 		features: ["Unlimited sites", "10M events / month", "Everything in Pro", "Unlimited team seats", "Custom goals & funnels"],
 		siteLimit: "Unlimited sites",
 		cta: "Start free trial",
+		ctaHref: "/upgrade?plan=team",
 		highlight: false,
 	},
 ];
@@ -294,7 +298,7 @@ function Nav() {
 							</a>
 						))}
 						<a
-							href="https://github.com/grtsnx/traytic"
+							href="https://github.com/traytic/traytic"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="px-3 py-1.5 text-[13px] rounded-md transition-colors flex items-center gap-1.5"
@@ -381,7 +385,7 @@ function Nav() {
 								))}
 								<div className="my-2" style={{ height: 1, backgroundColor: C.border }} />
 								<a
-									href="https://github.com/grtsnx/traytic"
+									href="https://github.com/traytic/traytic"
 									target="_blank"
 									rel="noopener noreferrer"
 									onClick={() => setOpen(false)}
@@ -457,13 +461,13 @@ function Hero() {
 					transition={{ duration: 0.5, delay: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
 					className="flex flex-wrap items-center justify-center gap-3">
 					<a
-						href="#pricing"
+						href="/onboarding"
 						className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 						style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
 						Get started free →
 					</a>
 					<a
-						href="https://github.com/grtsnx/traytic"
+						href="https://github.com/traytic/traytic"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="flex items-center gap-2 px-6 py-3 text-[14px] font-medium rounded-lg transition-opacity hover:opacity-80"
@@ -692,7 +696,7 @@ function Pricing() {
 								</ul>
 
 								<a
-									href="#"
+									href={plan.ctaHref}
 									className="w-full py-2.5 text-[13px] font-semibold rounded-lg transition-opacity hover:opacity-90 text-center"
 									style={{
 										backgroundColor: plan.highlight ? C.accent : "transparent",
@@ -731,17 +735,17 @@ function CTABanner() {
 						Ready to drop the consent banner?
 					</h2>
 					<p className="text-[15px] mb-8" style={{ color: C.textMuted, fontFamily: C.sans }}>
-						Start tracking in minutes. Your first 1M events are always free.
+						Start tracking in minutes. Free plan — 1 site, 50k events, no credit card.
 					</p>
 					<div className="flex flex-wrap items-center justify-center gap-3">
 						<a
-							href="#pricing"
+							href="/onboarding"
 							className="px-6 py-3 text-[14px] font-semibold rounded-lg transition-opacity hover:opacity-90"
 							style={{ backgroundColor: C.accent, color: "#fff", fontFamily: C.sans, textDecoration: "none" }}>
 							Get started free →
 						</a>
 						<a
-							href="https://github.com/grtsnx/traytic"
+							href="https://github.com/traytic/traytic"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="flex items-center gap-2 px-6 py-3 text-[14px] font-medium rounded-lg transition-opacity hover:opacity-80"

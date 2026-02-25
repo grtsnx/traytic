@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" fill="none" role="img" aria-label="Traytic">
+  <defs>
+    <linearGradient id="trayticGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon: stylized T + chart line (analytics) -->
+  <path fill="url(#trayticGrad)" d="M12 8h8v6h4V8h8v32h-8V22h-4v18h-8V8Z"/>
+  <path stroke="url(#trayticGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M32 34l4-8 4 4 6-10 6 6" fill="none"/>
+  <!-- Wordmark -->
+  <text x="72" y="32" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="22" font-weight="700" fill="#0f172a">Traytic</text>
+</svg>
