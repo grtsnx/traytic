@@ -38,12 +38,16 @@ export default function RootLayout({ children }) {
 
 ## Features
 
-- **Real-time** — live visitor counts via SSE, no polling
+- **Real-time** — live visitor count (polled every 10 s) + SSE stream from collect pipeline
 - **Privacy-first** — no cookies, no raw IP storage, daily-rotating SHA-256 visitor fingerprint
-- **Web Vitals** — LCP, CLS, INP, TTFB, FCP per route
-- **Custom events** — `track('signup', { plan: 'pro' })`
-- **Bot filtering** — server-side UA detection
-- **Social auth** — GitHub, Google, or email + password
+- **Web Vitals** — LCP, CLS, INP, TTFB, FCP per route, with p75/p95 and good-rate reporting
+- **Custom events** — `track('signup', { plan: 'pro' })` with arbitrary metadata
+- **UTM tracking** — automatic `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term` capture
+- **Bot filtering** — server-side UA regex (drops bots, crawlers, headless browsers)
+- **Referrer parsing** — known-source detection (Google, Bing, Twitter/X, Facebook, LinkedIn, Reddit, GitHub, YouTube)
+- **SPA navigation** — automatic `pushState`/`popstate` tracking for single-page apps
+- **Social auth** — GitHub, Google, or email + password (Better Auth)
+- **Team management** — organizations with OWNER / ADMIN / MEMBER roles, email invitations, member CRUD
 - **Dual billing** — Paystack for Africa (NGN/GHS/KES/ZAR), Polar everywhere else (USD/EUR)
 - **Self-hostable** — `docker compose up` and everything runs
 
@@ -55,12 +59,12 @@ export default function RootLayout({ children }) {
 |---|---|
 | Web | Next.js 15 (App Router) |
 | API | NestJS 10 + Fastify |
-| Analytics DB | ClickHouse — partitioned by month |
+| Analytics DB | ClickHouse — partitioned by month, 2-year TTL |
 | App DB | PostgreSQL + Prisma 7 |
 | Cache | Redis |
 | Auth | Better Auth |
-| Real-time | Server-Sent Events (SSE) |
-| SDK | `@traytic/analytics` — ESM + CJS, < 3 kB |
+| Real-time | Server-Sent Events (SSE) via RxJS |
+| SDK | `@traytic/analytics` — ESM + CJS, < 3 kB, `sendBeacon` first |
 | Monorepo | Bun 1.3.9 workspaces + Turborepo |
 
 ---
@@ -191,19 +195,31 @@ traytic/
 │   │   │   │   ├── sites/      # Sites CRUD + plan limits
 │   │   │   │   ├── collect/    # POST /collect — no auth, rate-limited
 │   │   │   │   ├── events/     # ClickHouse query endpoints
-│   │   │   │   ├── stream/     # SSE real-time feed
+│   │   │   │   ├── stream/     # SSE real-time feed (RxJS)
+│   │   │   │   ├── orgs/       # Organization + member + invitation CRUD
 │   │   │   │   └── billing/    # Paystack + Polar checkout + webhooks
 │   │   │   └── databases/
-│   │   │       ├── prisma/     # Schema + migrations
+│   │   │       ├── prisma/     # Schema + migrations (PostgreSQL)
 │   │   │       └── clickhouse/ # Events table DDL
 │   │   ├── Dockerfile
 │   │   └── entrypoint.sh       # migrate deploy → start server
 │   └── web/                    # Next.js app (port 3000)
-│       ├── app/                # Routes (page.tsx wrappers + layout)
-│       ├── views/              # Full-page view components
-│       └── lib/                # ThemeProvider
+│       ├── app/                # Routes — dashboard, onboarding, settings, etc.
+│       └── views/              # Full-page view components
+│           ├── home.tsx        # Landing page
+│           ├── dashboard.tsx   # Analytics dashboard (live API data)
+│           ├── onboarding.tsx  # Auth + first-site setup
+│           ├── team-settings.tsx # Org, members, invitations management
+│           ├── invite.tsx      # Invitation acceptance flow
+│           ├── upgrade.tsx     # Plan upgrade + billing
+│           ├── reset-password.tsx
+│           ├── terms.tsx
+│           └── privacy.tsx
 ├── packages/
 │   ├── sdk/                    # @traytic/analytics npm package
+│   │   └── src/
+│   │       ├── core.ts         # init, track, trackPageView, vitals, SPA patching
+│   │       └── adapters/       # next.tsx, react.tsx
 │   └── types/                  # Shared TypeScript types
 └── docker-compose.yml
 ```
@@ -216,7 +232,10 @@ traytic/
 User's browser (SDK)
   └── POST /collect
         ├── drop bots (UA regex)
+        ├── parse UA → browser, OS, device type
+        ├── parse referrer → known source or raw hostname
         ├── visitor_id = SHA256(siteId + ip + ua + date)  — no PII stored
+        ├── session_id = SHA256(siteId + ip + ua + hour)
         ├── insert → ClickHouse (async, fire-and-forget)
         └── emit  → SSE stream → live dashboard
 ```
@@ -255,6 +274,16 @@ track('purchase', { value: '49.99' })
 ```tsx
 <Analytics siteId="your-site-id" endpoint="https://api.yourdomain.com/collect" />
 ```
+
+### Configuration options
+
+| Option | Default | Description |
+|---|---|---|
+| `siteId` | — | Required. Your site identifier |
+| `endpoint` | `https://api.traytic.com/collect` | Collection endpoint |
+| `respectDnt` | `true` | Honour the browser Do Not Track flag |
+| `hashPaths` | `false` | Hash path segments for extra privacy |
+| `disabled` | `false` | Kill switch — disables all tracking |
 
 ---
 
@@ -296,6 +325,7 @@ GET /api/events/:siteId/sources
 GET /api/events/:siteId/countries
 GET /api/events/:siteId/devices
 GET /api/events/:siteId/vitals
+GET /api/events/:siteId/live
 ```
 
 Periods: `24h` · `7d` · `30d` · `90d`
@@ -307,26 +337,59 @@ const es = new EventSource(`/api/stream/${siteId}`, { withCredentials: true })
 es.onmessage = (e) => console.log(JSON.parse(e.data))
 ```
 
+### Organizations (authenticated)
+
+```
+GET    /orgs                              # list your orgs
+POST   /orgs                              # create org
+PATCH  /orgs/:orgId                       # update name / slug
+DELETE /orgs/:orgId                       # delete org (owner only)
+POST   /orgs/:orgId/leave                 # leave org
+
+GET    /orgs/:orgId/members               # list members
+PATCH  /orgs/:orgId/members/:memberId     # change role
+DELETE /orgs/:orgId/members/:memberId     # remove member
+
+POST   /orgs/:orgId/invitations           # invite by email
+GET    /orgs/:orgId/invitations           # list pending invitations
+DELETE /orgs/:orgId/invitations/:id       # revoke invitation
+POST   /orgs/invitations/accept           # accept invitation (token)
+```
+
+### Billing
+
+```
+GET  /api/billing/plans                   # list plans (public)
+POST /api/billing/checkout                # create checkout session
+GET  /api/billing/subscription            # current subscription
+POST /api/billing/webhooks/paystack       # Paystack webhook
+POST /api/billing/webhooks/polar          # Polar webhook
+```
+
 ---
 
 ## Roadmap
 
-- [x] SDK — Next.js and React adapters, `< 3 kB`, ESM + CJS, Web Vitals, custom events
-- [x] Event collection — bot filtering, privacy fingerprinting (SHA-256, daily-rotating), Web Vitals
-- [x] Real-time — SSE live visitor count via RxJS stream
+- [x] SDK — Next.js and React adapters, `< 3 kB`, ESM + CJS, Web Vitals, custom events, UTM capture, SPA navigation
+- [x] Event collection — bot filtering, privacy fingerprinting (SHA-256, daily-rotating), referrer parsing, Web Vitals
+- [x] Real-time — SSE stream from collect pipeline + polled live visitor count
 - [x] Auth — email + password, GitHub and Google OAuth, password reset via email (Better Auth)
-- [x] Billing — Paystack (Africa) + Polar (global), checkout and webhooks
-- [x] Dashboard UI — metric cards, timeseries chart, top pages & sources, devices & countries
+- [x] Billing — Paystack (Africa) + Polar (global), checkout, webhooks, subscription management
+- [x] Dashboard — metric cards, timeseries chart, top pages & sources, devices & countries — wired to live ClickHouse API
+- [x] Dashboard navigation — sidebar with overview, realtime, pages, sources, devices, goals tabs + site selector
+- [x] Team management — organizations (CRUD), members with role-based access (OWNER/ADMIN/MEMBER), email invitations with accept/revoke flow
 - [x] Landing page, onboarding, upgrade, billing success, and password reset pages
-- [ ] Wire dashboard to live API (currently shows mock data)
-- [ ] Dashboard multi-view navigation — realtime, pages, sources tabs
-- [ ] GeoIP — MaxMind installed, not wired into collect pipeline
-- [ ] Goals & funnels (schema exists, needs API + UI)
-- [ ] Alerts — email + Slack (schema exists, needs API + UI)
+- [x] Terms of service and privacy policy pages
+- [ ] Dashboard sub-views — dedicated realtime, pages, sources, devices, goals panels (sidebar nav exists, needs per-tab content)
+- [ ] GeoIP — country/region/city enrichment in collect pipeline (ClickHouse columns exist, not wired yet)
+- [ ] Goals & funnels — Prisma schema exists (Goal model with URL/EVENT types), needs API + UI
+- [ ] Alerts — Prisma schema exists (Alert model with metric/condition/threshold/channels), needs API + UI
+- [ ] Web Vitals dashboard tab — API endpoint exists (`/vitals`), needs frontend visualization
 - [ ] Live visitor map
 - [ ] Astro, Vue, Svelte SDK adapters
 - [ ] CLI — `bunx traytic dev`
-- [ ] Team / organization management
+- [ ] Public/shared dashboards (Site model has `public` flag, not yet exposed)
+- [ ] Email delivery for invitations (currently link-based, no transactional email)
 
 ---
 
