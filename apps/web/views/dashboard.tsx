@@ -144,7 +144,13 @@ function Sparkline({ data, color, up }: { data: number[]; color: string; up: boo
 	const path = makeSparkPath(data, 60, 24);
 	return (
 		<svg width="60" height="24" viewBox="0 0 60 24" style={{ display: "block" }}>
-			<path d={path} fill="none" stroke={up ? C.green : C.red} strokeWidth="1.5" strokeLinecap="round" />
+			<path
+				d={path}
+				fill="none"
+				stroke={color || (up ? C.green : C.red)}
+				strokeWidth="1.5"
+				strokeLinecap="round"
+			/>
 		</svg>
 	);
 }
