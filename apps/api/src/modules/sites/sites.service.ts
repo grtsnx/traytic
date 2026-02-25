@@ -11,10 +11,20 @@ import { PLAN_LIMITS } from '@traytic/types';
 const ALPHA_NUM = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 function generateId(prefix: string, length = 12): string {
-  const bytes = randomBytes(length);
+  const charsetLength = ALPHA_NUM.length;
+  const maxUnbiased = Math.floor(256 / charsetLength) * charsetLength;
+
   let id = prefix;
-  for (let i = 0; i < length; i++) {
-    id += ALPHA_NUM[bytes[i] % ALPHA_NUM.length];
+  while (id.length < prefix.length + length) {
+    const bytes = randomBytes(length);
+    for (let i = 0; i < bytes.length && id.length < prefix.length + length; i++) {
+      const byte = bytes[i];
+      if (byte >= maxUnbiased) {
+        continue;
+      }
+      const index = byte % charsetLength;
+      id += ALPHA_NUM[index];
+    }
   }
   return id;
 }
